@@ -36,6 +36,7 @@ pub struct PowerSummary {
     pub power_type: String,
     pub available_level: i32,
     pub max_boosts: i32,
+    pub has_self_effects: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -147,6 +148,60 @@ pub struct BoostInfo {
     pub aspects: Vec<String>,
 }
 
+// --- Total Stats types ---
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct StatSource {
+    pub source: String,
+    pub value: f64,
+    pub display_value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CombinedStat {
+    pub category: String,
+    pub label: String,
+    pub total_value: f64,
+    pub display_value: String,
+    pub sources: Vec<StatSource>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SlottedSetInfo {
+    pub set_name: String,
+    pub count: i32,
+    pub power_full_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveSetBonus {
+    pub set_name: String,
+    pub set_display_name: String,
+    pub set_icon: Option<String>,
+    pub min_boosts: i32,
+    pub slotted_count: i32,
+    pub power_full_name: String,
+    pub display_texts: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TotalStatsResult {
+    pub combined_stats: Vec<CombinedStat>,
+    pub active_bonuses: Vec<ActiveSetBonus>,
+    pub end_drain: f64,
+    pub base_hp: f64,
+    pub effective_hp: f64,
+    pub hp_per_sec: f64,
+    pub base_end: f64,
+    pub effective_end: f64,
+    pub end_per_sec: f64,
+}
+
 // --- Save/Load build file structs ---
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -172,6 +227,8 @@ pub struct SavedPower {
     pub power_full_name: String,
     pub num_slots: i32,
     pub boosts: HashMap<String, SavedBoost>,
+    #[serde(default)]
+    pub is_active: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

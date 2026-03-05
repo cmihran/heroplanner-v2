@@ -87,7 +87,15 @@ fn load_powerset_inner(
     let mut stmt = db
         .prepare(
             "SELECT p.id, p.full_name, p.display_name, p.display_short_help,
-                    p.icon, p.power_type, p.available_level, p.max_boosts
+                    p.icon, p.power_type, p.available_level, p.max_boosts,
+                    CASE
+                        WHEN p.power_type IN ('Toggle', 'Auto') THEN 1
+                        ELSE EXISTS(
+                            SELECT 1 FROM power_effects pe
+                            JOIN effect_templates et ON et.effect_id = pe.id
+                            WHERE pe.power_id = p.id AND et.target = 'Self'
+                        )
+                    END as has_self_effects
              FROM powers p
              JOIN powerset_powers pp ON pp.power_name = p.full_name
              JOIN powersets ps ON pp.powerset_id = ps.id
@@ -107,6 +115,7 @@ fn load_powerset_inner(
                 power_type: row.get(5)?,
                 available_level: row.get(6)?,
                 max_boosts: row.get(7)?,
+                has_self_effects: row.get(8)?,
             })
         })
         .map_err(|e| e.to_string())?

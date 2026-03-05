@@ -12,6 +12,8 @@ import type {
   PowersetCategory,
   PowersetWithPowers,
   ResolvedBoost,
+  SlottedSetInfo,
+  TotalStatsResult,
 } from '@/types/models';
 import { mockApi } from './mock-data';
 
@@ -68,4 +70,24 @@ export const api = {
 
   pickDirectory: (defaultDir?: string): Promise<string | null> =>
     isTauri ? invoke('pick_directory', { defaultDir }) : Promise.resolve(null),
+
+  calculateTotalStats: (
+    archetypeId: number,
+    level: number,
+    activePowerNames: string[],
+    slottedSets: SlottedSetInfo[],
+  ): Promise<TotalStatsResult> =>
+    isTauri
+      ? invoke('calculate_total_stats', { archetypeId, level, activePowerNames, slottedSets })
+      : Promise.resolve({
+          combinedStats: [],
+          activeBonuses: [],
+          endDrain: 0,
+          baseHp: 0,
+          effectiveHp: 0,
+          hpPerSec: 0,
+          baseEnd: 0,
+          effectiveEnd: 0,
+          endPerSec: 0,
+        }),
 };

@@ -17,6 +17,7 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
   const removeSlot = useHeroStore((s) => s.removeSlot);
   const canAddMore = useHeroStore((s) => s.canAddMoreSlots);
   const swapPowerLevels = useHeroStore((s) => s.swapPowerLevels);
+  const togglePowerActive = useHeroStore((s) => s.togglePowerActive);
 
   const [dragOver, setDragOver] = useState(false);
 
@@ -68,11 +69,12 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
     );
   }
 
-  const { power, numSlots } = selectedPower;
+  const { power, numSlots, isActive } = selectedPower;
+  const showToggle = power.has_self_effects;
 
   return (
     <Card
-      className={`bg-gradient-to-b from-coh-gradient1/20 to-coh-gradient2/40 border-coh-secondary/50 transition-colors ${dragOver ? 'border-coh-primary/70 bg-coh-primary/10' : ''}`}
+      className={`bg-gradient-to-b from-coh-gradient1/20 to-coh-gradient2/40 border-coh-secondary/50 transition-colors ${dragOver ? 'border-coh-primary/70 bg-coh-primary/10' : ''} ${!isActive && showToggle ? 'opacity-60' : ''}`}
       draggable
       onDragStart={handleDragStart}
       {...dragProps}
@@ -81,6 +83,13 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
         <CardTitle className="text-sm flex items-center gap-2">
           <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab shrink-0" />
           <span className="text-xs text-muted-foreground">Lv{level}</span>
+          {showToggle && (
+            <button
+              onClick={(e) => { e.stopPropagation(); togglePowerActive(power.full_name); }}
+              className={`w-2.5 h-2.5 rounded-full shrink-0 border transition-colors ${isActive ? 'bg-green-500 border-green-400' : 'bg-muted border-muted-foreground/40'}`}
+              title={isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'}
+            />
+          )}
           <PowerHoverCard powerFullName={power.full_name}>
             <span className="flex items-center gap-2 cursor-help">
               <img src={imageUrl(power.icon)} alt="" className="w-5 h-5" />

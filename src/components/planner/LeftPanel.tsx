@@ -4,6 +4,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HeroInfo } from './HeroInfo';
 import { PowerSetSelector } from './PowerSetSelector';
+import { TotalStatsTab } from './TotalStatsTab';
+import { SetBonusesTab } from './SetBonusesTab';
 
 export function LeftPanel() {
   const primarySetChoices = useHeroStore((s) => s.primarySetChoices);
@@ -70,16 +72,12 @@ export function LeftPanel() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="totalstats" className="flex-1 p-4">
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Total Stats — Coming soon
-          </div>
+        <TabsContent value="totalstats" className="flex-1 min-h-0">
+          <TotalStatsTab />
         </TabsContent>
 
-        <TabsContent value="setbonuses" className="flex-1 p-4">
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Set Bonuses — Coming soon
-          </div>
+        <TabsContent value="setbonuses" className="flex-1 min-h-0">
+          <SetBonusesTab />
         </TabsContent>
       </Tabs>
     </div>

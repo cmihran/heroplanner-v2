@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail, HeroBuildFile } from '@/types/models';
+import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail, HeroBuildFile, TotalStatsResult, SlottedSetInfo } from '@/types/models';
 
 const LEVEL_SLOTS = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 47, 49];
 const MAX_TOTAL_SLOTS = 67;
@@ -21,6 +21,7 @@ export interface SelectedPower {
   power: PowerSummary;
   numSlots: number;
   boosts: Record<number, SlottedBoost>; // slotIndex -> slotted boost
+  isActive: boolean;
 }
 
 interface HeroState {
@@ -63,6 +64,10 @@ interface HeroState {
   totalSlotsAdded: number;
   isDirty: boolean;
 
+  // Total Stats
+  totalStatsResult: TotalStatsResult | null;
+  totalStatsLoading: boolean;
+
   // Cache
   powerDetailCache: Record<string, PowerDetail>;
   boostSetDetailCache: Record<string, BoostSetDetail>;
@@ -82,6 +87,8 @@ interface HeroState {
   setBoostInSlot: (powerName: string, slotIndex: number, boost: SlottedBoost) => void;
   removeBoostFromSlot: (powerName: string, slotIndex: number) => void;
   swapPowerLevels: (fromLevel: number, toLevel: number) => void;
+  togglePowerActive: (powerName: string) => void;
+  refreshTotalStats: () => Promise<void>;
   saveBuild: () => Promise<void>;
   saveAsNewBuild: () => Promise<void>;
   loadBuild: () => Promise<void>;
@@ -142,6 +149,8 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   powerNameToLevel: {},
   totalSlotsAdded: 0,
   isDirty: false,
+  totalStatsResult: null,
+  totalStatsLoading: false,
   powerDetailCache: {},
   boostSetDetailCache: {},
 
@@ -186,6 +195,8 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       powerNameToLevel: {},
       totalSlotsAdded: 0,
       isDirty: true,
+      totalStatsResult: null,
+      totalStatsLoading: false,
       powerDetailCache: {},
       boostSetDetailCache: {},
     });
@@ -272,6 +283,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         power,
         numSlots: power.max_boosts > 0 ? 1 : 0,
         boosts: {},
+        isActive: power.power_type === 'Toggle' || power.power_type === 'Auto',
       };
 
       set({
@@ -420,6 +432,76 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     set({ levelToPower: newLevelToPower, powerNameToLevel: newPowerNameToLevel, isDirty: true });
   },
 
+  togglePowerActive: (powerName) => {
+    const state = get();
+    const level = state.powerNameToLevel[powerName];
+    if (level === undefined) return;
+    const selected = state.levelToPower[level];
+    if (!selected) return;
+
+    set({
+      levelToPower: {
+        ...state.levelToPower,
+        [level]: { ...selected, isActive: !selected.isActive },
+      },
+      isDirty: true,
+    });
+  },
+
+  refreshTotalStats: async () => {
+    const state = get();
+    if (!state.archetype) {
+      set({ totalStatsResult: null });
+      return;
+    }
+
+    set({ totalStatsLoading: true });
+
+    // Collect active power names
+    const activePowerNames: string[] = [];
+    for (const sp of Object.values(state.levelToPower)) {
+      if (sp && sp.isActive) {
+        activePowerNames.push(sp.power.full_name);
+      }
+    }
+
+    // Collect slotted set info
+    const setCountMap = new Map<string, { count: number; powerFullName: string }>();
+    for (const sp of Object.values(state.levelToPower)) {
+      if (!sp) continue;
+      const perPowerSets = new Map<string, number>();
+      for (const boost of Object.values(sp.boosts)) {
+        if (boost.setName) {
+          perPowerSets.set(boost.setName, (perPowerSets.get(boost.setName) || 0) + 1);
+        }
+      }
+      for (const [setName, count] of perPowerSets) {
+        // Each set in a power is independent
+        const key = `${setName}|${sp.power.full_name}`;
+        setCountMap.set(key, { count, powerFullName: sp.power.full_name });
+      }
+    }
+
+    const slottedSets: SlottedSetInfo[] = [];
+    for (const [key, { count, powerFullName }] of setCountMap) {
+      const setName = key.split('|')[0];
+      slottedSets.push({ setName, count, powerFullName });
+    }
+
+    try {
+      const result = await api.calculateTotalStats(
+        state.archetype.id,
+        49, // level 50 (0-indexed)
+        activePowerNames,
+        slottedSets,
+      );
+      set({ totalStatsResult: result, totalStatsLoading: false });
+    } catch (err) {
+      console.error('Failed to calculate total stats:', err);
+      set({ totalStatsLoading: false });
+    }
+  },
+
   saveBuild: async () => {
     const state = get();
     if (!state.archetype) return;
@@ -436,6 +518,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
           powerFullName: sp.power.full_name,
           numSlots: sp.numSlots,
           boosts,
+          isActive: sp.isActive,
         };
       });
 
@@ -487,6 +570,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
           powerFullName: sp.power.full_name,
           numSlots: sp.numSlots,
           boosts,
+          isActive: sp.isActive,
         };
       });
 
@@ -586,11 +670,16 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       const slotsAdded = powerSummary.max_boosts > 0 ? sp.numSlots - 1 : 0;
       totalSlotsAdded += Math.max(0, slotsAdded);
 
+      // Restore isActive from saved data, or default based on power_type
+      const defaultActive = powerSummary.power_type === 'Toggle' || powerSummary.power_type === 'Auto';
+      const isActive = sp.isActive ?? defaultActive;
+
       newLevelToPower[sp.level] = {
         level: sp.level,
         power: powerSummary,
         numSlots: sp.numSlots,
         boosts,
+        isActive,
       };
       newPowerNameToLevel[sp.powerFullName] = sp.level;
     }

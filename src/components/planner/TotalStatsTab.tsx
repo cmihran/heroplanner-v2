@@ -1,0 +1,352 @@
+import { useEffect, useRef, useState } from 'react';
+import { useHeroStore } from '@/stores/heroStore';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ChevronRight } from 'lucide-react';
+import type { CombinedStat, StatSource, TotalStatsResult } from '@/types/models';
+
+const CATEGORY_ORDER = ['Offense', 'Defense', 'Resistance', 'Damage', 'Movement', 'Status Resistance', 'Recovery', 'Misc'];
+const VITAL_LABELS = new Set(['Max HP', 'Regeneration', 'Max End', 'Recovery', 'End Reduction']);
+
+function groupByCategory(stats: CombinedStat[]): Record<string, CombinedStat[]> {
+  const groups: Record<string, CombinedStat[]> = {};
+  for (const stat of stats) {
+    if (!groups[stat.category]) groups[stat.category] = [];
+    groups[stat.category].push(stat);
+  }
+  const POSITIONAL = new Set(['Melee', 'Ranged', 'AoE']);
+  for (const [category, entries] of Object.entries(groups)) {
+    if (category === 'Defense') {
+      // Damage types alphabetical first, then positional at bottom
+      entries.sort((a, b) => {
+        const aPos = POSITIONAL.has(a.label) ? 1 : 0;
+        const bPos = POSITIONAL.has(b.label) ? 1 : 0;
+        if (aPos !== bPos) return aPos - bPos;
+        return a.label.localeCompare(b.label);
+      });
+    } else {
+      entries.sort((a, b) => a.label.localeCompare(b.label));
+    }
+  }
+  return groups;
+}
+
+function StatRow({ stat, barColor }: { stat: CombinedStat; barColor?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasSources = stat.sources.length > 1;
+  // For bar: totalValue is a fraction (e.g. 0.45 = 45%), cap display at 100%
+  const barPct = barColor ? Math.min(Math.abs(stat.totalValue) * 100, 100) : 0;
+
+  const Row = hasSources ? 'button' : 'div';
+
+  return (
+    <div>
+      <Row
+        onClick={hasSources ? () => setExpanded(!expanded) : undefined}
+        className={`relative w-full flex items-center justify-between text-[0.8125rem] py-1 px-1 rounded overflow-hidden ${hasSources ? 'hover:bg-white/5 cursor-pointer' : ''}`}
+      >
+        {barColor && barPct > 0 && (
+          <div
+            className="absolute inset-y-0 left-0 rounded pointer-events-none"
+            style={{ width: `${barPct}%`, backgroundColor: barColor }}
+          />
+        )}
+        <span className="relative flex items-center gap-1.5 text-slate-300">
+          {hasSources && (
+            <ChevronRight className={`h-3 w-3 text-slate-500 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+          )}
+          {!hasSources && <span className="w-3" />}
+          {stat.label}
+        </span>
+        <span className="relative font-mono text-slate-100">
+          {stat.displayValue}
+        </span>
+      </Row>
+      {expanded && (
+        <div className="ml-7 mb-1 space-y-0.5">
+          {stat.sources.map((src) => (
+            <div key={src.source} className="flex items-center justify-between text-[0.6875rem] py-0.5 px-1">
+              <span className="text-slate-500">{src.source}</span>
+              <span className="font-mono text-slate-400">{src.displayValue}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SourceGroup({ label, sources, color }: { label: string; sources: StatSource[]; color: 'emerald' | 'blue' }) {
+  if (sources.length === 0) return null;
+  return (
+    <div>
+      <div className={`text-[0.625rem] font-medium pt-0.5 ${color === 'emerald' ? 'text-emerald-600/50' : 'text-blue-600/50'}`}>
+        {label}
+      </div>
+      {sources.map((src) => (
+        <div key={src.source} className="flex justify-between text-[0.6875rem] py-px">
+          <span className={color === 'emerald' ? 'text-emerald-600/80' : 'text-blue-600/80'}>{src.source}</span>
+          <span className={`font-mono ${color === 'emerald' ? 'text-emerald-500/70' : 'text-blue-500/70'}`}>{src.displayValue}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VitalBars({ result }: { result: TotalStatsResult }) {
+  const [hpExpanded, setHpExpanded] = useState(false);
+  const [endExpanded, setEndExpanded] = useState(false);
+
+  const { effectiveHp, hpPerSec, baseHp, effectiveEnd, endPerSec, baseEnd, endDrain, combinedStats } = result;
+  const netEnd = endPerSec - endDrain;
+
+  const find = (label: string) => combinedStats.find((s) => s.category === 'Recovery' && s.label === label);
+  const hpBonus = find('Max HP');
+  const regen = find('Regeneration');
+  const endBonus = find('Max End');
+  const recovery = find('Recovery');
+  const endReduct = find('End Reduction');
+
+  if (effectiveHp === 0 && effectiveEnd === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      {/* Health Bar */}
+      {effectiveHp > 0 && (
+        <button
+          onClick={() => setHpExpanded(!hpExpanded)}
+          className="w-full text-left rounded-lg overflow-hidden border border-emerald-500/20 hover:border-emerald-500/30 transition-colors cursor-pointer"
+        >
+          <div className="relative bg-gradient-to-r from-emerald-900/50 via-emerald-800/30 to-emerald-950/40">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/[0.03] to-transparent animate-pulse pointer-events-none" />
+
+            <div className="relative px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <ChevronRight className={`h-3 w-3 text-emerald-600/50 transition-transform ${hpExpanded ? 'rotate-90' : ''}`} />
+                  <span className="text-emerald-300 text-[1rem] font-bold">{Math.round(effectiveHp)}</span>
+                  <span className="text-emerald-600 text-[0.625rem] font-semibold uppercase tracking-wider">HP</span>
+                </div>
+                <span className="text-emerald-500/60 text-[0.6875rem] font-mono">
+                  +{hpPerSec.toFixed(1)}/s
+                </span>
+              </div>
+            </div>
+
+            <div className="h-1 bg-emerald-950/60">
+              <div className="h-full bg-gradient-to-r from-emerald-500/50 via-emerald-400/30 to-emerald-600/20 rounded-r-full" />
+            </div>
+          </div>
+
+          {hpExpanded && (
+            <div className="bg-emerald-950/20 border-t border-emerald-500/10 px-3 py-1.5 space-y-0.5">
+              <div className="text-[0.625rem] font-medium pt-0.5 text-emerald-600/50">Max HP</div>
+              <div className="flex justify-between text-[0.6875rem] py-px">
+                <span className="text-emerald-600/80">Base</span>
+                <span className="font-mono text-emerald-500/70">{Math.round(baseHp)}</span>
+              </div>
+              {hpBonus?.sources.map((src) => (
+                <div key={src.source} className="flex justify-between text-[0.6875rem] py-px">
+                  <span className="text-emerald-600/80">{src.source}</span>
+                  <span className="font-mono text-emerald-500/70">{src.displayValue}</span>
+                </div>
+              ))}
+              <SourceGroup label="Regeneration" sources={regen?.sources || []} color="emerald" />
+              <div className="flex justify-between text-[0.6875rem] mt-1 pt-1 border-t border-emerald-500/10">
+                <span className="text-emerald-500/70">Regen Rate</span>
+                <span className="font-mono text-emerald-400/80">+{hpPerSec.toFixed(2)} HP/s</span>
+              </div>
+            </div>
+          )}
+        </button>
+      )}
+
+      {/* Endurance Bar */}
+      {effectiveEnd > 0 && (
+        <button
+          onClick={() => setEndExpanded(!endExpanded)}
+          className="w-full text-left rounded-lg overflow-hidden border border-blue-500/20 hover:border-blue-500/30 transition-colors cursor-pointer"
+        >
+          <div className="relative bg-gradient-to-r from-blue-900/50 via-blue-800/30 to-blue-950/40">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/[0.03] to-transparent animate-pulse pointer-events-none" />
+
+            <div className="relative px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <ChevronRight className={`h-3 w-3 text-blue-600/50 transition-transform ${endExpanded ? 'rotate-90' : ''}`} />
+                  <span className="text-blue-300 text-[1rem] font-bold">{Math.round(effectiveEnd)}</span>
+                  <span className="text-blue-600 text-[0.625rem] font-semibold uppercase tracking-wider">END</span>
+                </div>
+                <span className={`text-[0.6875rem] font-mono px-1.5 rounded ${
+                  netEnd >= 0
+                    ? 'text-blue-500/60'
+                    : 'text-red-400 bg-red-500/10 border border-red-500/20'
+                }`}>
+                  {netEnd >= 0 ? '+' : ''}{netEnd.toFixed(2)}/s
+                </span>
+              </div>
+            </div>
+
+            <div className="relative h-1 bg-blue-950/60 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-500/50 via-blue-400/30 to-blue-600/20 rounded-r-full" />
+              {endDrain > 0 && (
+                <div
+                  className="absolute inset-y-0 right-0 bg-gradient-to-l from-red-500/50 to-transparent rounded-l-full"
+                  style={{ width: `${Math.min((endDrain / Math.max(endPerSec, 0.01)) * 100, 100)}%` }}
+                />
+              )}
+            </div>
+          </div>
+
+          {endExpanded && (
+            <div className="bg-blue-950/20 border-t border-blue-500/10 px-3 py-1.5 space-y-0.5">
+              <div className="text-[0.625rem] font-medium pt-0.5 text-blue-600/50">Max End</div>
+              <div className="flex justify-between text-[0.6875rem] py-px">
+                <span className="text-blue-600/80">Base</span>
+                <span className="font-mono text-blue-500/70">{Math.round(baseEnd)}</span>
+              </div>
+              {endBonus?.sources.map((src) => (
+                <div key={src.source} className="flex justify-between text-[0.6875rem] py-px">
+                  <span className="text-blue-600/80">{src.source}</span>
+                  <span className="font-mono text-blue-500/70">{src.displayValue}</span>
+                </div>
+              ))}
+              <SourceGroup label="Recovery" sources={recovery?.sources || []} color="blue" />
+              <SourceGroup label="End Reduction" sources={endReduct?.sources || []} color="blue" />
+              <div className="mt-1 pt-1 border-t border-blue-500/10 space-y-0.5">
+                <div className="flex justify-between text-[0.6875rem]">
+                  <span className="text-blue-500/70">Recovery Rate</span>
+                  <span className="font-mono text-blue-400/80">+{endPerSec.toFixed(2)}/s</span>
+                </div>
+                {endDrain > 0 && (
+                  <div className="flex justify-between text-[0.6875rem]">
+                    <span className="text-red-500/60">Toggle Drain</span>
+                    <span className="font-mono text-red-400/70">−{endDrain.toFixed(2)}/s</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[0.6875rem]">
+                  <span className={netEnd >= 0 ? 'text-blue-400/80' : 'text-red-400/80'}>Net</span>
+                  <span className={`font-mono ${netEnd >= 0 ? 'text-blue-300/80' : 'text-red-300/80'}`}>
+                    {netEnd >= 0 ? '+' : ''}{netEnd.toFixed(2)}/s
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CategorySection({ category, entries }: { category: string; entries: CombinedStat[] }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const barColor = category === 'Defense' ? 'rgba(168,85,247,0.25)' : category === 'Resistance' ? 'rgba(236,72,153,0.25)' : undefined;
+  const hasZeros = (category === 'Defense' || category === 'Resistance') && entries.some((s) => s.totalValue === 0);
+  const visible = hasZeros && !showAll ? entries.filter((s) => s.totalValue !== 0 || s.sources.length > 0) : entries;
+
+  return (
+    <div className="rounded-lg overflow-hidden">
+      <div className="bg-white/[0.04] flex items-center">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex-1 px-3 py-1.5 flex items-center gap-1.5 hover:bg-white/[0.06] transition-colors cursor-pointer"
+        >
+          <ChevronRight className={`h-3 w-3 text-slate-500 transition-transform ${collapsed ? '' : 'rotate-90'}`} />
+          <h3 className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-wider">
+            {category}
+          </h3>
+        </button>
+        {hasZeros && !collapsed && (
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="px-2.5 py-1.5 text-[0.625rem] text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+          >
+            {showAll ? 'hide 0%' : 'show all'}
+          </button>
+        )}
+      </div>
+      {!collapsed && (
+        <div className="px-2 py-1">
+          {visible.map((stat) => (
+            <StatRow key={stat.label} stat={stat} barColor={barColor} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TotalStatsTab() {
+  const archetype = useHeroStore((s) => s.archetype);
+  const levelToPower = useHeroStore((s) => s.levelToPower);
+  const totalStatsResult = useHeroStore((s) => s.totalStatsResult);
+  const totalStatsLoading = useHeroStore((s) => s.totalStatsLoading);
+  const refreshTotalStats = useHeroStore((s) => s.refreshTotalStats);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      refreshTotalStats();
+    }, 300);
+    return () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    };
+  }, [levelToPower, refreshTotalStats]);
+
+  if (!archetype) {
+    return (
+      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+        Select an archetype to see stats
+      </div>
+    );
+  }
+
+  if (totalStatsLoading && !totalStatsResult) {
+    return (
+      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+        Calculating...
+      </div>
+    );
+  }
+
+  if (!totalStatsResult || totalStatsResult.combinedStats.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+        Activate powers to see stats
+      </div>
+    );
+  }
+
+  const grouped = groupByCategory(totalStatsResult.combinedStats);
+  const allCategories = [
+    ...CATEGORY_ORDER.filter((c) => grouped[c]),
+    ...Object.keys(grouped).filter((c) => !CATEGORY_ORDER.includes(c)),
+  ];
+
+  return (
+    <ScrollArea className="h-full">
+      <div className="p-3 space-y-2">
+        {/* Vital Bars — HP/Regen and End/Recovery */}
+        <VitalBars result={totalStatsResult} />
+
+        {/* Stat categories */}
+        {allCategories.map((category) => {
+          let entries = grouped[category];
+          if (!entries || entries.length === 0) return null;
+          if (category === 'Recovery') {
+            entries = entries.filter((s) => !VITAL_LABELS.has(s.label));
+            if (entries.length === 0) return null;
+          }
+          return (
+            <CategorySection key={category} category={category} entries={entries} />
+          );
+        })}
+      </div>
+    </ScrollArea>
+  );
+}

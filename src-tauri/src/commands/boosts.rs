@@ -1,6 +1,7 @@
 use rusqlite::Statement;
 use tauri::State;
 
+use super::utils::{format_attrib, format_scale};
 use crate::db::DbState;
 use crate::models::{BoostInfo, BoostSetBonus, BoostSetDetail, BoostSetSummary};
 
@@ -169,82 +170,6 @@ pub fn get_boost_set_detail(
         bonuses,
         boosts,
     })
-}
-
-fn format_attrib(attrib: &str) -> &str {
-    match attrib {
-        "Accuracy" => "Accuracy",
-        "Smashing_Dmg" => "Smashing",
-        "Lethal_Dmg" => "Lethal",
-        "Fire_Dmg" | "Fire" => "Fire",
-        "Cold_Dmg" | "Cold" => "Cold",
-        "Energy_Dmg" | "Energy" => "Energy",
-        "Negative_Energy_Dmg" | "Negative_Energy" => "Negative Energy",
-        "Psionic_Dmg" | "Psionic" => "Psionic",
-        "Toxic_Dmg" | "Toxic" => "Toxic",
-        "Heal_Dmg" | "HitPoints" => "Max HP",
-        "Absorb" => "Absorb",
-        "Recovery" => "Recovery",
-        "Regeneration" => "Regeneration",
-        "Endurance" => "Endurance",
-        "EnduranceDiscount" => "End Reduction",
-        "FlyingSpeed" => "Fly Speed",
-        "RunningSpeed" => "Run Speed",
-        "JumpingSpeed" => "Jump Speed",
-        "JumpHeight" => "Jump Height",
-        "RechargeTime" => "Recharge",
-        "Range" => "Range",
-        "Confused" => "Confuse",
-        "Terrorized" => "Fear",
-        "Held" => "Hold",
-        "Immobilized" => "Immobilize",
-        "Stunned" => "Stun",
-        "Sleep" => "Sleep",
-        "Knockback" | "KnockBack" => "Knockback",
-        "Knockup" | "KnockUp" => "Knockup",
-        "Repel" => "Repel",
-        "Teleport" => "Teleport",
-        "Taunt" => "Taunt",
-        "Placate" => "Placate",
-        "Area" => "AoE",
-        "Melee" => "Melee",
-        "Ranged" => "Ranged",
-        "Smashing" => "Smashing",
-        "Lethal" => "Lethal",
-        "ToHit" => "ToHit",
-        "StealthRadius_PVE" => "Stealth (PvE)",
-        "StealthRadius_PVP" => "Stealth (PvP)",
-        "PerceptionRadius" => "Perception",
-        "Translucency" => "Translucency",
-        "Debt_Protection" => "Debt Protection",
-        "Global_Chance_Mod" => "Global Chance",
-        "Meter" => "Meter",
-        "Grant_Power" => "Special",
-        "Execute_Power" | "Recharge_Power" => "Special",
-        "Null" => "Special",
-        other => other,
-    }
-}
-
-fn format_scale(scale: f64, aspect: &str) -> String {
-    match aspect {
-        "Strength" | "Resistance" | "Current" => {
-            let pct = scale * 100.0;
-            if pct == pct.round() {
-                format!("{:.0}%", pct)
-            } else {
-                format!("{:.2}%", pct)
-            }
-        }
-        "Absolute" => {
-            if scale == scale.round() {
-                format!("{:.0}", scale)
-            } else {
-                format!("{:.2}", scale)
-            }
-        }
-        _ => format!("{:.2}", scale),
-    }
 }
 
 fn resolve_bonus_display(

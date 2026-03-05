@@ -21,7 +21,7 @@ function makePower(id: number, psName: string, name: string, displayName: string
   return {
     id, full_name: `${psName}.${name}`, display_name: displayName,
     display_short_help: help, icon: 'power_default.png', power_type: type,
-    available_level: level, max_boosts: 6,
+    available_level: level, max_boosts: 6, has_self_effects: type === 'Toggle' || type === 'Auto',
   };
 }
 

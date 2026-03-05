@@ -35,6 +35,7 @@ export interface PowerSummary {
   power_type: string;
   available_level: number;
   max_boosts: number;
+  has_self_effects: boolean;
 }
 
 export interface PowerDetail {
@@ -148,6 +149,7 @@ export interface SavedPower {
   powerFullName: string;
   numSlots: number;
   boosts: Record<string, SavedBoost>;
+  isActive?: boolean;
 }
 
 export interface SavedBoost {
@@ -174,4 +176,48 @@ export interface BoostInfo {
   is_proc: boolean;
   attuned: boolean;
   aspects: string[];
+}
+
+// --- Total Stats types ---
+
+export interface StatSource {
+  source: string;
+  value: number;
+  displayValue: string;
+}
+
+export interface CombinedStat {
+  category: string;
+  label: string;
+  totalValue: number;
+  displayValue: string;
+  sources: StatSource[];
+}
+
+export interface SlottedSetInfo {
+  setName: string;
+  count: number;
+  powerFullName: string;
+}
+
+export interface ActiveSetBonus {
+  setName: string;
+  setDisplayName: string;
+  setIcon: string | null;
+  minBoosts: number;
+  slottedCount: number;
+  powerFullName: string;
+  displayTexts: string[];
+}
+
+export interface TotalStatsResult {
+  combinedStats: CombinedStat[];
+  activeBonuses: ActiveSetBonus[];
+  endDrain: number;
+  baseHp: number;
+  effectiveHp: number;
+  hpPerSec: number;
+  baseEnd: number;
+  effectiveEnd: number;
+  endPerSec: number;
 }

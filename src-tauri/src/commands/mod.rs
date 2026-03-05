@@ -5,3 +5,4 @@ pub mod calc;
 pub mod powers;
 pub mod powersets;
 pub mod settings;
+pub mod utils;
