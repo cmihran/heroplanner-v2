@@ -105,6 +105,86 @@ final_value = boosted_value (before target's resistance/level-difference scaling
 
 Power balance within an AT is managed through scales. A tier-1 blast typically deals scale 1.0 damage. What that translates to in actual damage varies by AT, but is consistent within an AT. The qualitative descriptions in power tooltips ("Minor", "Moderate", "Extreme") are based on scale, which is why they can't be compared across ATs.
 
+### Aspect (How Effects Combine)
+
+The **aspect** of an AttribMod determines how its magnitude interacts with the target attribute:
+
+| Aspect | Behavior | Display | Example |
+|--------|----------|---------|---------|
+| **Strength** | Percentage multiplier on the attribute | `+10%` | +10% Damage, +30% Recovery |
+| **Current** | Modifier to the current value (percentage for most attributes) | `-60%` | -60% Endurance (reduces max end by 60%), +5% Defense |
+| **Maximum** | Flat addition to the attribute's maximum value | `187.41` | True Grit adds 187.41 flat HP to max HP |
+| **Absolute** | Flat absolute value | `100` | Base HP = 1874.07, Base End = 100 |
+| **Resistance** | Resistance to modifications of this attribute | `5%` | 5% Resistance to Hold |
+
+For effective value calculation with mixed aspects:
+```
+effective_value = base * (1 + sum_of_percentage_mods) + sum_of_flat_mods
+```
+Where "percentage_mods" are Strength/Current aspect and "flat_mods" are Maximum/Absolute aspect.
+
+**Important**: A single attribute (e.g. Max HP) can receive contributions from different aspects simultaneously. HP bonuses from armor toggles (e.g. True Grit, One with the Shield) typically use "Maximum" aspect with high scale values, producing flat HP additions (187.41, 374.81), not percentage increases. Set bonuses for HP tend to use "Strength" aspect (percentage-based).
+
+## Endurance
+
+All player characters start with a maximum of **100 Endurance**. Through set bonuses, temporary powers, and accolades, this maximum can be increased.
+
+### Recovery
+
+A player character's endurance bar fills from 0% to 100% in **60 seconds** at base recovery. This is true regardless of whether max endurance is 100 or 110 — more max endurance means faster absolute recovery.
+
+**Formula**: `Recovery (End/sec) = MaxEnd * totalRecovery / 60`
+
+Where `totalRecovery` = `attrib_base.recovery` (1.0 for most ATs, 1.05 for Arachnos) + sum of all recovery buffs.
+
+Examples:
+- Base: `100 / (60 / 1.0) = 1.67 EPS`
+- With Stamina (+25% recovery): `100 * 1.25 / 60 = 2.08 EPS`
+- With +10% max endurance: `110 * 1.0 / 60 = 1.83 EPS` (same improvement as +10% recovery, but also more total endurance)
+
+### Endurance Drain
+
+- **Click powers** drain endurance instantly on activation
+- **Toggle powers** drain at regular intervals while active (`endurance_cost` field = drain per second)
+- **Auto powers** do not cost endurance
+- If a toggle would drain more endurance than the character has, it detoggles ("Out of power")
+
+### Endurance Reduction
+
+The `EnduranceDiscount` attribute (Strength aspect) reduces the endurance cost of powers. This is separate from Recovery.
+
+## HP and Regeneration
+
+Each archetype has a different base max HP at level 50 (from `attrib_max.hit_points[49]`):
+
+| AT | Base HP (Lv50) |
+|----|----------------|
+| Tanker | 1874.07 |
+| Brute | 1606.35 |
+| Scrapper | 1338.62 |
+| Blaster, Sentinel, Stalker | 1204.76 |
+| Arachnos Soldier/Widow, Corruptor, Peacebringer, Warshade | 1070.90 |
+| Controller, Defender, Dominator | 1017.35 |
+| Mastermind | 803.17 |
+
+### Regeneration Rate
+
+**Formula**: `Regen (HP/sec) = effectiveHP * totalRegen / 60`
+
+Where `totalRegen` = `attrib_base.regeneration` (0.25 for most ATs, 0.30 for Arachnos) + sum of all regen buffs.
+
+At base for a Tanker: `1874.07 * 0.25 / 60 = 7.81 HP/sec` (full heal in ~240 seconds = 4 minutes).
+
+### Effective HP Calculation
+
+HP can be increased by both flat additions and percentage buffs:
+- **Maximum aspect** (flat): armor toggles like True Grit add flat HP (e.g., +187.41)
+- **Strength aspect** (%): set bonuses like "+5% Max HP" multiply base HP
+
+```
+effective_hp = base_hp * (1 + sum_pct_bonuses) + sum_flat_bonuses
+```
+
 ### Anonymous Pseudopets
 
 Powers that create ongoing effects at a location (e.g. Bonfire, Blizzard, Rain of Fire) summon an invisible, untargetable NPC entity ("pseudopet") with auto-fire powers that create the desired area effect. This has mechanical implications:
@@ -184,6 +264,33 @@ The Incarnate system is endgame progression available after level 50. It provide
 - **Incarnate XP / Threads / Salvage** — Incarnate abilities are crafted or unlocked using special currency and salvage earned from Incarnate-tier content (trials, task forces, etc.).
 - **Tiers** — each slot has multiple tiers of power (typically 4), with higher tiers providing stronger effects. Higher tiers also offer branching choices within each slot.
 - **Global boost behavior** — Alpha and some Hybrid abilities function as global enhancements. They follow the same boost-type matching rules as regular enhancements: they only improve powers that accept the relevant enhancement types.
+
+## Defense and Resistance
+
+### Defense Types
+
+Defense reduces the chance of being hit. There are **11 defense types** — 3 positional and 8 damage-typed:
+
+**Positional**: Melee, Ranged, AoE
+**Damage-typed**: Smashing, Lethal, Fire, Cold, Energy, Negative Energy, Psionic, Toxic
+
+Every incoming attack checks against both the positional defense and the damage-type defense, using the **higher** of the two. For example, a Fire Blast (Ranged + Fire damage) checks against max(Ranged Defense, Fire Defense).
+
+Defense is expressed as a percentage (e.g., 5% Defense to Melee). The soft cap for defense is **45%** (floor hit chance is 5%).
+
+### Resistance Types
+
+Resistance reduces damage taken after a hit lands. There are **8 resistance types** — damage-typed only:
+
+**Damage-typed**: Smashing, Lethal, Fire, Cold, Energy, Negative Energy, Psionic, Toxic
+
+There are **no positional resistance types** (no Melee/Ranged/AoE Resistance). Resistance caps vary by AT (e.g., Tankers cap at 90%, Blasters at 75%).
+
+### Status Resistance
+
+Separate from damage resistance, status resistance reduces the duration and magnitude of mez effects:
+
+Hold, Immobilize, Stun, Sleep, Fear, Confuse, Knockback
 
 ## PvE vs PvP
 
