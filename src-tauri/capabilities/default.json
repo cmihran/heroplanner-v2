@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicokosi/tauri-docs/fix-capability-remote-url-prefix/references/.schema/capability.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default"
+  ]
+}
