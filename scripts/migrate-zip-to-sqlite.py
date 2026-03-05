@@ -468,14 +468,15 @@ def insert_boost_sets(conn, zf, zip_names):
 
         # Individual boosts from computed.boost_infos
         computed = data.get("computed", {})
-        boost_infos = computed.get("boost_infos", [])
-        for bi in boost_infos:
-            # boost_infos entries can be dicts or plain strings (just the key)
+        boost_infos = computed.get("boost_infos", {})
+        # boost_infos is a dict keyed by boost_key, or occasionally a list
+        if isinstance(boost_infos, dict):
+            boost_infos_iter = boost_infos.items()
+        else:
+            boost_infos_iter = [(bi if isinstance(bi, str) else bi.get("key", ""), bi if isinstance(bi, dict) else {"key": bi}) for bi in boost_infos]
+        for boost_key, bi in boost_infos_iter:
             if isinstance(bi, str):
-                boost_key = bi
                 bi = {"key": bi}
-            else:
-                boost_key = bi.get("key", bi.get("name", ""))
             if not boost_key:
                 continue
             conn.execute(

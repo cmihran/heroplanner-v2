@@ -110,6 +110,7 @@ pub struct BoostSetSummary {
     pub name: String,
     pub display_name: String,
     pub group_name: String,
+    pub icon: Option<String>,
     pub min_level: i32,
     pub max_level: i32,
 }
@@ -130,6 +131,7 @@ pub struct BoostSetBonus {
     pub min_boosts: i32,
     pub max_boosts: i32,
     pub auto_powers: Vec<String>,
+    pub display_texts: Vec<String>,
     pub is_pvp_bonus: bool,
 }
 

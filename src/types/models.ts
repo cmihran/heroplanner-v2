@@ -93,10 +93,18 @@ export interface CalculatedEffect {
   duration: string | null;
 }
 
+export interface SlottedBoost {
+  boostKey: string;
+  icon: string | null;
+  computedName: string | null;
+  setName: string | null;
+}
+
 export interface BoostSetSummary {
   name: string;
   display_name: string;
   group_name: string;
+  icon: string | null;
   min_level: number;
   max_level: number;
 }
@@ -115,6 +123,7 @@ export interface BoostSetBonus {
   min_boosts: number;
   max_boosts: number;
   auto_powers: string[];
+  display_texts: string[];
   is_pvp_bonus: boolean;
 }
 

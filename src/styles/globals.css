@@ -44,10 +44,12 @@
   --color-ring: #357bd7;
 }
 
-body {
-  background-color: var(--color-background);
+html, body {
+  background: transparent;
   color: var(--color-foreground);
   font-family: system-ui, -apple-system, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .font-hero {

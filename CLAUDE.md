@@ -16,12 +16,13 @@ See `notes/game_mechanics.md` for detailed CoH game mechanics reference (power h
 heroplanner-v2/
   src/                          # React frontend (thin display layer)
     components/
-      ui/                       # shadcn/ui primitives (Button, Card, Select, Tabs, etc.)
-      planner/                  # App components (Header, LeftPanel, RightPanel, HeroInfo, PowerSetSelector, PowerSlotCard)
+      ui/                       # shadcn/ui primitives (Button, Card, Select, Tabs, HoverCard, etc.)
+      planner/                  # App components (Header, LeftPanel, RightPanel, HeroInfo, PowerSetSelector, PowerSlotCard, EnhancementSlot, EnhancementPicker, BoostSetBrowser, PowerHoverCard, EnhancementHoverCard)
     lib/
       api.ts                    # Typed invoke() wrappers for Tauri commands
       utils.ts                  # shadcn cn() utility
       images.ts                 # Image path helper
+      enhancement-data.ts       # IO enhancement icon mappings
     stores/
       heroStore.ts              # Zustand store — manages UI state, calls Rust for data
     types/
@@ -82,11 +83,15 @@ heroplanner-v2/
 - All npm dependencies installed (Zustand, Radix UI, shadcn/ui primitives, lucide-react, react-resizable-panels v4)
 - Rust backend: models, DB connection, all 9 Tauri commands (archetypes, powersets, powers, boosts, calc)
 - React frontend: Zustand store, API wrapper, all UI components (Header, HeroInfo, PowerSetSelector, PowerSlotCard, LeftPanel, RightPanel)
+- Enhancement picker UI: Popover with IO tab (plain enhancements) and Sets tab (BoostSetBrowser with category → set → boost drill-down)
+- HoverCards: PowerHoverCard (stats grid with TO icons + description on power hover), EnhancementHoverCard (set pieces + set bonuses with resolved values on enhancement hover)
+- `get_boost_set_detail` resolves bonus power names to formatted display text with actual values (e.g. "+15% Accuracy", "+1.88% Def (AoE)")
+- `SlottedBoost` tracks `setName` to link slotted enhancements back to their boost set
 - SQLite schema (15 tables including migration_meta)
 - Migration script reads directly from zip — no extraction step
 - Database populated: 15 archetypes, 203 categories, 26k powers, 228 boost sets (~504MB)
 - TypeScript compiles clean: `npx tsc -b --noEmit`
-- Rust compiles clean: `cargo check` (1 harmless warning about unused Origin struct)
+- Rust compiles clean: `cargo check` (pre-existing harmless warnings only)
 
 ### REMAINING — must do before app is functional
 1. **Copy static assets** (images + font) — not yet sourced for v2
@@ -100,7 +105,6 @@ python3 scripts/migrate-zip-to-sqlite.py --zip <path>  # or specify explicitly
 ```
 
 ### FUTURE WORK (not yet built)
-- Enhancement picker UI (Popover with IO/Sets/Hami tabs) — the slot management logic exists but the picker for selecting which enhancement goes in a slot is not built
 - Total Stats tab (aggregate all effects across selected powers)
 - Set Bonuses tab (show active set bonuses from slotted enhancements)
 - Inherents tab (archetype inherent powers)
@@ -173,8 +177,6 @@ The original Vue/Quasar project at `/home/charl/dev/heroplanner` is abandoned bu
 - Chose Zustand for lightweight frontend state (heavy state in Rust)
 
 ## What's Remaining (v2)
-1. Copy static assets (images + font) to `public/`
-2. First launch test with `npm run dev`
-3. Enhancement picker UI (slot selection popover)
-4. Stub tabs: Total Stats, Set Bonuses, Inherents, Incarnates, Accolades
-5. Simulation engine (Rust) — the main reason for the Tauri rewrite
+1. Stub tabs: Total Stats, Set Bonuses, Inherents, Incarnates, Accolades
+2. Enhancement Diversification (diminishing returns calculation)
+3. Simulation engine (Rust) — the main reason for the Tauri rewrite

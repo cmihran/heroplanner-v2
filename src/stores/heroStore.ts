@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/lib/api';
-import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers } from '@/types/models';
+import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail } from '@/types/models';
 
 const LEVEL_SLOTS = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 47, 49];
 const MAX_TOTAL_SLOTS = 67;
@@ -17,7 +17,7 @@ export interface SelectedPower {
   level: number;
   power: PowerSummary;
   numSlots: number;
-  boosts: Record<number, string>; // slotIndex -> boost_key
+  boosts: Record<number, SlottedBoost>; // slotIndex -> slotted boost
 }
 
 interface HeroState {
@@ -59,6 +59,10 @@ interface HeroState {
   powerNameToLevel: Record<string, number>;
   totalSlotsAdded: number;
 
+  // Cache
+  powerDetailCache: Record<string, PowerDetail>;
+  boostSetDetailCache: Record<string, BoostSetDetail>;
+
   // Actions
   loadInitialData: () => Promise<void>;
   selectArchetype: (archetype: Archetype) => Promise<void>;
@@ -69,6 +73,10 @@ interface HeroState {
   addSlot: (powerName: string) => void;
   removeSlot: (powerName: string) => void;
   canAddMoreSlots: () => boolean;
+  fetchPowerDetail: (powerFullName: string) => Promise<PowerDetail>;
+  fetchBoostSetDetail: (setName: string) => Promise<BoostSetDetail>;
+  setBoostInSlot: (powerName: string, slotIndex: number, boost: SlottedBoost) => void;
+  removeBoostFromSlot: (powerName: string, slotIndex: number) => void;
 }
 
 function initLevelMap(): Record<number, SelectedPower | null> {
@@ -124,6 +132,8 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   levelToPower: initLevelMap(),
   powerNameToLevel: {},
   totalSlotsAdded: 0,
+  powerDetailCache: {},
+  boostSetDetailCache: {},
 
   loadInitialData: async () => {
     const archetypes = await api.listArchetypes();
@@ -153,6 +163,8 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       levelToPower: initLevelMap(),
       powerNameToLevel: {},
       totalSlotsAdded: 0,
+      powerDetailCache: {},
+      boostSetDetailCache: {},
     });
 
     // Load all powerset data (choices + powers) in parallel
@@ -286,6 +298,66 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   },
 
   canAddMoreSlots: () => get().totalSlotsAdded < MAX_TOTAL_SLOTS,
+
+  fetchPowerDetail: async (powerFullName) => {
+    const cached = get().powerDetailCache[powerFullName];
+    if (cached) return cached;
+
+    const detail = await api.getPowerDetail(powerFullName);
+    set((state) => ({
+      powerDetailCache: { ...state.powerDetailCache, [powerFullName]: detail },
+    }));
+    return detail;
+  },
+
+  fetchBoostSetDetail: async (setName) => {
+    const cached = get().boostSetDetailCache[setName];
+    if (cached) return cached;
+
+    const detail = await api.getBoostSetDetail(setName);
+    set((state) => ({
+      boostSetDetailCache: { ...state.boostSetDetailCache, [setName]: detail },
+    }));
+    return detail;
+  },
+
+  setBoostInSlot: (powerName, slotIndex, boost) => {
+    const state = get();
+    const level = state.powerNameToLevel[powerName];
+    if (level === undefined) return;
+
+    const selected = state.levelToPower[level];
+    if (!selected) return;
+
+    set({
+      levelToPower: {
+        ...state.levelToPower,
+        [level]: {
+          ...selected,
+          boosts: { ...selected.boosts, [slotIndex]: boost },
+        },
+      },
+    });
+  },
+
+  removeBoostFromSlot: (powerName, slotIndex) => {
+    const state = get();
+    const level = state.powerNameToLevel[powerName];
+    if (level === undefined) return;
+
+    const selected = state.levelToPower[level];
+    if (!selected) return;
+
+    const newBoosts = { ...selected.boosts };
+    delete newBoosts[slotIndex];
+
+    set({
+      levelToPower: {
+        ...state.levelToPower,
+        [level]: { ...selected, boosts: newBoosts },
+      },
+    });
+  },
 }));
 
 export { LEVEL_SLOTS };

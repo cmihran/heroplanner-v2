@@ -18,7 +18,22 @@ pub fn init_db(app: &AppHandle) -> Connection {
     std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
     let db_path = app_dir.join("heroplanner.db");
 
-    // Copy bundled DB to app data dir if it doesn't exist yet
+    // In dev mode, always use the source DB directly (so re-migration takes effect immediately).
+    // In production, copy the bundled resource to app data dir on first run.
+    let is_dev = cfg!(debug_assertions);
+
+    if is_dev {
+        let dev_db_path = std::env::current_dir()
+            .unwrap_or_default()
+            .join("heroplanner.db");
+        if dev_db_path.exists() {
+            let conn = Connection::open(&dev_db_path).expect("failed to open dev database");
+            conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
+                .expect("failed to set pragmas");
+            return conn;
+        }
+    }
+
     if !db_path.exists() {
         let resource_path = app
             .path()
@@ -28,17 +43,8 @@ pub fn init_db(app: &AppHandle) -> Connection {
         if resource_path.exists() {
             std::fs::copy(&resource_path, &db_path).expect("failed to copy database");
         } else {
-            // In dev mode, try src-tauri/ directory
-            let dev_db_path = std::env::current_dir()
-                .unwrap_or_default()
-                .join("heroplanner.db");
-            if dev_db_path.exists() {
-                std::fs::copy(&dev_db_path, &db_path).expect("failed to copy dev database");
-            } else {
-                // Create empty DB - migration hasn't been run yet
-                eprintln!("Warning: No heroplanner.db found. Run the migration script first.");
-                return Connection::open(&db_path).expect("failed to create empty database");
-            }
+            eprintln!("Warning: No heroplanner.db found. Run the migration script first.");
+            return Connection::open(&db_path).expect("failed to create empty database");
         }
     }
 

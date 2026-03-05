@@ -4,6 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { imageUrl } from '@/lib/images';
 import type { PowersetCategory, PowerSummary } from '@/types/models';
 import { cn } from '@/lib/utils';
+import { PowerHoverCard } from './PowerHoverCard';
 
 interface PowerSetSelectorProps {
   label: string;
@@ -52,15 +53,19 @@ export function PowerSetSelector({ label, choices, powers, slot }: PowerSetSelec
                     isSelected && 'bg-coh-gradient2 text-white'
                   )}
                 >
-                  <img src={imageUrl(power.icon)} alt="" className="w-5 h-5 shrink-0" />
-                  <div className="min-w-0">
-                    <div className="truncate">{power.display_name}</div>
-                    {power.display_short_help && (
-                      <div className="text-xs text-muted-foreground truncate">
-                        {power.display_short_help}
+                  <PowerHoverCard powerFullName={power.full_name} side="right">
+                    <div className="flex items-center gap-2 min-w-0 cursor-help">
+                      <img src={imageUrl(power.icon)} alt="" className="w-5 h-5 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="truncate">{power.display_name}</div>
+                        {power.display_short_help && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {power.display_short_help}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  </PowerHoverCard>
                   <span className="ml-auto text-xs text-muted-foreground shrink-0">
                     Lv{power.available_level}
                   </span>

@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { imageUrl } from '@/lib/images';
 import { Plus, Minus } from 'lucide-react';
+import { EnhancementSlot } from './EnhancementSlot';
+import { PowerHoverCard } from './PowerHoverCard';
 
 interface PowerSlotCardProps {
   level: number;
@@ -36,34 +38,39 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
       <CardHeader className="p-3 pb-1">
         <CardTitle className="text-sm flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Lv{level}</span>
-          <img src={imageUrl(power.icon)} alt="" className="w-5 h-5" />
-          <span className="truncate">{power.display_name}</span>
-          <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-coh-secondary/60 text-coh-info">
-            {power.power_type}
-          </span>
+          <PowerHoverCard powerFullName={power.full_name}>
+            <span className="flex items-center gap-2 cursor-help">
+              <img src={imageUrl(power.icon)} alt="" className="w-5 h-5" />
+              <span className="shrink-0">{power.display_name}</span>
+            </span>
+          </PowerHoverCard>
+          {power.display_short_help && (
+            <span className="text-[10px] text-muted-foreground truncate font-normal">{power.display_short_help}</span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-1">
-        {power.display_short_help && (
-          <p className="text-xs text-muted-foreground mb-2">{power.display_short_help}</p>
-        )}
 
         {/* Enhancement slots */}
         {power.max_boosts > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="flex gap-1">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
               {Array.from({ length: numSlots }, (_, i) => (
-                <div
+                <EnhancementSlot
                   key={i}
-                  className="w-6 h-6 rounded-full border border-coh-info/50 bg-coh-secondary/30 flex items-center justify-center text-[10px] text-muted-foreground"
-                >
-                  {i + 1}
-                </div>
+                  powerFullName={power.full_name}
+                  slotIndex={i}
+                  boost={selectedPower.boosts[i] || null}
+                  isEmpty={false}
+                />
               ))}
               {Array.from({ length: power.max_boosts - numSlots }, (_, i) => (
-                <div
+                <EnhancementSlot
                   key={`empty-${i}`}
-                  className="w-6 h-6 rounded-full border border-border/30 bg-transparent"
+                  powerFullName={power.full_name}
+                  slotIndex={numSlots + i}
+                  boost={null}
+                  isEmpty={true}
                 />
               ))}
             </div>
