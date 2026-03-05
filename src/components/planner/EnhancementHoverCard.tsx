@@ -79,15 +79,15 @@ function SetHoverContent({ boost, detail }: { boost: SlottedBoost; detail: Boost
 
       {/* Set pieces */}
       <div className="border-t border-border pt-2 mb-2">
-        <p className="text-[10px] font-medium text-muted-foreground mb-1">Set Enhancements</p>
+        <p className="text-[0.625rem] font-medium text-muted-foreground mb-1">Set Enhancements</p>
         {detail.boosts.map((b) => (
           <div
             key={b.boost_key}
-            className={`flex items-center gap-1.5 text-[11px] py-0.5 ${b.boost_key === boost.boostKey ? 'text-coh-info' : 'text-muted-foreground'}`}
+            className={`flex items-center gap-1.5 text-[0.6875rem] py-0.5 ${b.boost_key === boost.boostKey ? 'text-coh-info' : 'text-muted-foreground'}`}
           >
             {b.icon && <img src={imageUrl(b.icon)} alt="" className="w-3.5 h-3.5" />}
             <span>{b.computed_name ?? b.boost_key}</span>
-            {b.is_proc && <span className="text-[9px] text-coh-info ml-auto">Proc</span>}
+            {b.is_proc && <span className="text-[0.5625rem] text-coh-info ml-auto">Proc</span>}
           </div>
         ))}
       </div>
@@ -95,9 +95,9 @@ function SetHoverContent({ boost, detail }: { boost: SlottedBoost; detail: Boost
       {/* Set bonuses */}
       {detail.bonuses.length > 0 && (
         <div className="border-t border-border pt-2">
-          <p className="text-[10px] font-medium text-muted-foreground mb-1">Set Bonuses</p>
+          <p className="text-[0.625rem] font-medium text-muted-foreground mb-1">Set Bonuses</p>
           {detail.bonuses.map((bonus, i) => (
-            <div key={i} className="text-[11px] text-muted-foreground py-0.5">
+            <div key={i} className="text-[0.6875rem] text-muted-foreground py-0.5">
               <span className="text-coh-info">({bonus.min_boosts})</span>{' '}
               {bonus.display_texts.join(', ')}
             </div>

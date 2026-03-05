@@ -89,9 +89,11 @@ heroplanner-v2/
 - HoverCards: PowerHoverCard (stats grid with TO icons + description on power hover), EnhancementHoverCard (set pieces + set bonuses with resolved values on enhancement hover)
 - `get_boost_set_detail` resolves bonus power names to formatted display text with actual values (e.g. "+15% Accuracy", "+1.88% Def (AoE)")
 - `SlottedBoost` tracks `setName` to link slotted enhancements back to their boost set
-- Save/Load hero builds: native OS file dialogs (`.hero` JSON files), stateless save format (names/keys only, reconstructed from DB on load)
+- Save/Load/Save As hero builds: native OS file dialogs (`.hero` JSON files), stateless save format (names/keys only, reconstructed from DB on load)
 - Auto-load last build on startup (remembers last saved/loaded file path in localStorage)
 - Configurable save directory in Settings (folder browser via native dialog)
+- Header layout: app controls (Settings, Save, Save As, Load) on left; window controls (min, max, close) on right; title absolutely centered across full window width
+- UI zoom via root `font-size` scaling (not webview zoom) — keeps SVGs and text crisp at any scale
 - Toast notifications via `sonner` for save/load feedback
 - SQLite schema (15 tables including migration_meta)
 - Migration script reads directly from zip — no extraction step
@@ -117,7 +119,7 @@ python3 scripts/migrate-zip-to-sqlite.py --zip <path>  # or specify explicitly
 - Simulation engine (the main reason for choosing Rust — not started yet)
 
 ## localStorage Keys
-- `heroplanner-zoom` — zoom factor (default 1.5)
+- `heroplanner-zoom` — zoom factor (default 1.5), applied as root font-size (factor × 16px)
 - `heroplanner-save-dir` — default save directory path for file dialogs
 - `heroplanner-last-build` — path to last saved/loaded `.hero` file (auto-loaded on startup)
 
@@ -126,6 +128,7 @@ python3 scripts/migrate-zip-to-sqlite.py --zip <path>  # or specify explicitly
 - TypeScript with React (functional components, hooks)
 - `@/` path alias maps to `src/` (configured in tsconfig.app.json and vite.config.ts)
 - Tailwind CSS v4 with `@theme` custom colors (coh-primary, coh-secondary, coh-gradient1-4, etc.)
+- Use `rem` units (not `px`) for sizes that should scale with zoom — Tailwind utilities already use rem; custom sizes like `text-[0.625rem]` instead of `text-[10px]`
 - Rust: standard formatting, `serde` derive on all structs crossing the Tauri bridge
 - State: Zustand for frontend UI state, heavy data/computation in Rust
 
@@ -166,8 +169,7 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 - Rust needs `use tauri::Manager;` import for `app.manage()` to work.
 - Some power JSON files in the zip have URL-encoded colons (`%3A`) in filenames, causing 38 duplicate `full_name` entries — the migration script handles this via `INSERT OR IGNORE` + `changes()` check.
 - Boost set `boost_infos` entries can be either dicts or plain strings (just the key) — migration script handles both.
-
-# HeroPlanner Project Memory
+- WebKitGTK `set_zoom()` on Linux/WSL2 scales a bitmap (blurry SVGs/text). Use root `font-size` scaling with `rem` units instead.
 
 ## Project Status
 - **v2** (`/home/charl/dev/heroplanner-v2`): Tauri v2 + React + TypeScript + Tailwind v4 + shadcn/ui + Zustand + Rust/SQLite backend. Compiles clean (TS + Rust). Database populated with game data.
@@ -178,3 +180,15 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 - Mobile is a later nice-to-have
 - Chose SQLite over bundled JSON files for data storage
 - Chose Zustand for lightweight frontend state (heavy state in Rust)
+
+### Code Intelligence
+
+Prefer LSP over Grep/Read for code navigation — it's faster, precise, and avoids reading entire files:
+- `workspaceSymbol` to find where something is defined
+- `findReferences` to see all usages across the codebase
+- `goToDefinition` / `goToImplementation` to jump to source
+- `hover` for type info without reading the file
+
+Use Grep only when LSP isn't available or for text/pattern searches (comments, strings, config).
+
+After writing or editing code, check LSP diagnostics and fix errors before proceeding.

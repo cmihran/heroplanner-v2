@@ -88,7 +88,7 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
             </span>
           </PowerHoverCard>
           {power.display_short_help && (
-            <span className="text-[10px] text-muted-foreground truncate font-normal">{power.display_short_help}</span>
+            <span className="text-[0.625rem] text-muted-foreground truncate font-normal">{power.display_short_help}</span>
           )}
         </CardTitle>
       </CardHeader>

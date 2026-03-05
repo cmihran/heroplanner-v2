@@ -116,7 +116,7 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
         <div className="flex flex-col">
           <div className="px-3 py-2 border-b border-border/30">
             <p className="text-xs font-medium">{selectedSet.display_name}</p>
-            <p className="text-[10px] text-muted-foreground">Lv {selectedSet.min_level}-{selectedSet.max_level}</p>
+            <p className="text-[0.625rem] text-muted-foreground">Lv {selectedSet.min_level}-{selectedSet.max_level}</p>
           </div>
           {selectedSet.boosts.map((b) => (
             <button
@@ -126,14 +126,14 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
             >
               {b.icon && <img src={imageUrl(b.icon)} alt="" className="w-4 h-4" />}
               <span>{b.computed_name ?? b.boost_key}</span>
-              {b.is_proc && <span className="text-[10px] text-coh-info ml-auto">Proc</span>}
+              {b.is_proc && <span className="text-[0.625rem] text-coh-info ml-auto">Proc</span>}
             </button>
           ))}
           {selectedSet.bonuses.length > 0 && (
             <div className="px-3 py-2 border-t border-border/30">
-              <p className="text-[10px] font-medium text-muted-foreground mb-1">Set Bonuses</p>
+              <p className="text-[0.625rem] font-medium text-muted-foreground mb-1">Set Bonuses</p>
               {selectedSet.bonuses.map((bonus, i) => (
-                <p key={i} className="text-[10px] text-muted-foreground">
+                <p key={i} className="text-[0.625rem] text-muted-foreground">
                   ({bonus.min_boosts}+) {bonus.display_texts.join(', ')}
                 </p>
               ))}

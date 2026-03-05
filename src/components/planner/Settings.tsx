@@ -16,19 +16,25 @@ function getStoredZoom(): number {
   return stored ? parseFloat(stored) : DEFAULT_ZOOM;
 }
 
+function applyRootFontSize(factor: number) {
+  document.documentElement.style.fontSize = `${factor * 16}px`;
+}
+
 export function Settings() {
   const [zoom, setZoom] = useState(getStoredZoom);
   const [saveDir, setSaveDir] = useState(() => localStorage.getItem(SAVE_DIR_KEY) ?? '');
 
   useEffect(() => {
-    api.setZoom(zoom);
+    // Reset webview zoom to 1.0 (may have been set by previous version)
+    api.setZoom(1.0);
+    applyRootFontSize(zoom);
   }, []);
 
   const applyZoom = (newZoom: number) => {
     const clamped = Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoom)) * 10) / 10;
     setZoom(clamped);
     localStorage.setItem(ZOOM_KEY, String(clamped));
-    api.setZoom(clamped);
+    applyRootFontSize(clamped);
   };
 
   const browseSaveDir = async () => {
