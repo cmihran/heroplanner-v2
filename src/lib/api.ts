@@ -8,36 +8,43 @@ import type {
   PowerDetail,
   PowerSummary,
   PowersetCategory,
+  PowersetWithPowers,
 } from '@/types/models';
+import { mockApi } from './mock-data';
+
+const isTauri = '__TAURI_INTERNALS__' in window;
 
 export const api = {
-  listArchetypes: () => invoke<Archetype[]>('list_archetypes'),
+  listArchetypes: (): Promise<Archetype[]> =>
+    isTauri ? invoke('list_archetypes') : Promise.resolve(mockApi.listArchetypes()),
 
   getArchetypeTables: (archetypeId: number) =>
-    invoke<NamedTableValues[]>('get_archetype_tables', { archetypeId }),
+    isTauri ? invoke<NamedTableValues[]>('get_archetype_tables', { archetypeId }) : Promise.resolve([]),
 
   listPowersetChoices: (categoryName: string) =>
-    invoke<PowersetCategory[]>('list_powerset_choices', { categoryName }),
+    isTauri ? invoke<PowersetCategory[]>('list_powerset_choices', { categoryName }) : Promise.resolve([]),
 
   loadPowerset: (powersetName: string) =>
-    invoke<PowerSummary[]>('load_powerset', { powersetName }),
+    isTauri ? invoke<PowerSummary[]>('load_powerset', { powersetName }) : Promise.resolve([]),
+
+  loadPowersetsForCategory: (categoryName: string): Promise<PowersetWithPowers[]> =>
+    isTauri ? invoke('load_powersets_for_category', { categoryName }) : Promise.resolve(mockApi.loadPowersetsForCategory(categoryName)),
 
   getPowerDetail: (powerFullName: string) =>
-    invoke<PowerDetail>('get_power_detail', { powerFullName }),
+    isTauri ? invoke<PowerDetail>('get_power_detail', { powerFullName }) : Promise.resolve({} as PowerDetail),
 
   getPowersBatch: (powerFullNames: string[]) =>
-    invoke<PowerDetail[]>('get_powers_batch', { powerFullNames }),
+    isTauri ? invoke<PowerDetail[]>('get_powers_batch', { powerFullNames }) : Promise.resolve([]),
 
   listBoostSetsForCategory: (categoryName: string) =>
-    invoke<BoostSetSummary[]>('list_boost_sets_for_category', { categoryName }),
+    isTauri ? invoke<BoostSetSummary[]>('list_boost_sets_for_category', { categoryName }) : Promise.resolve([]),
 
   getBoostSetDetail: (setName: string) =>
-    invoke<BoostSetDetail>('get_boost_set_detail', { setName }),
+    isTauri ? invoke<BoostSetDetail>('get_boost_set_detail', { setName }) : Promise.resolve({} as BoostSetDetail),
 
   calculatePowerEffects: (archetypeId: number, powerFullName: string, level: number) =>
-    invoke<CalculatedEffect[]>('calculate_power_effects', {
-      archetypeId,
-      powerFullName,
-      level,
-    }),
+    isTauri ? invoke<CalculatedEffect[]>('calculate_power_effects', { archetypeId, powerFullName, level }) : Promise.resolve([]),
+
+  setZoom: (factor: number) =>
+    isTauri ? invoke<void>('set_zoom', { factor }) : Promise.resolve(),
 };

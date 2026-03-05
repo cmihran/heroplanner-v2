@@ -83,6 +83,13 @@ pub struct Template {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PowersetWithPowers {
+    pub powerset_name: String,
+    pub display_name: String,
+    pub powers: Vec<PowerSummary>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NamedTableValues {
     pub table_name: String,
     pub values: Vec<f64>,

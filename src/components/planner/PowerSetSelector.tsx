@@ -48,7 +48,7 @@ export function PowerSetSelector({ label, choices, powers, slot }: PowerSetSelec
                   key={power.full_name}
                   onClick={() => togglePower(power)}
                   className={cn(
-                    'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors hover:bg-coh-secondary/50',
+                    'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-coh-secondary/50',
                     isSelected && 'bg-coh-gradient2 text-white'
                   )}
                 >

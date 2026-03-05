@@ -19,11 +19,13 @@ pub fn run() {
             commands::archetypes::get_archetype_tables,
             commands::powersets::list_powerset_choices,
             commands::powersets::load_powerset,
+            commands::powersets::load_powersets_for_category,
             commands::powers::get_power_detail,
             commands::powers::get_powers_batch,
             commands::boosts::list_boost_sets_for_category,
             commands::boosts::get_boost_set_detail,
             commands::calc::calculate_power_effects,
+            commands::settings::set_zoom,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

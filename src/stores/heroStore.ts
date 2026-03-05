@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/lib/api';
-import type { Archetype, Origin, PowersetCategory, PowerSummary } from '@/types/models';
+import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers } from '@/types/models';
 
 const LEVEL_SLOTS = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 47, 49];
 const MAX_TOTAL_SLOTS = 67;
@@ -35,6 +35,9 @@ interface HeroState {
   secondarySetChoices: PowersetCategory[];
   powerPoolChoices: PowersetCategory[];
 
+  // Preloaded powerset data: powerset_name -> powers
+  preloadedPowers: Record<string, PowerSummary[]>;
+
   // Selected powerset names
   selectedPrimary: string | null;
   selectedSecondary: string | null;
@@ -43,7 +46,7 @@ interface HeroState {
   selectedPool3: string | null;
   selectedPool4: string | null;
 
-  // Loaded powers for each set
+  // Loaded powers for each set (derived from preloadedPowers)
   primaryPowers: PowerSummary[];
   secondaryPowers: PowerSummary[];
   pool1Powers: PowerSummary[];
@@ -61,7 +64,7 @@ interface HeroState {
   selectArchetype: (archetype: Archetype) => Promise<void>;
   selectOrigin: (origin: Origin) => void;
   setHeroName: (name: string) => void;
-  selectPowerset: (slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4', ps: PowersetCategory) => Promise<void>;
+  selectPowerset: (slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4', ps: PowersetCategory) => void;
   togglePower: (power: PowerSummary) => void;
   addSlot: (powerName: string) => void;
   removeSlot: (powerName: string) => void;
@@ -88,6 +91,14 @@ function findSuitableLevel(
   return null;
 }
 
+function indexPowersets(data: PowersetWithPowers[]): Record<string, PowerSummary[]> {
+  const map: Record<string, PowerSummary[]> = {};
+  for (const ps of data) {
+    map[ps.powerset_name] = ps.powers;
+  }
+  return map;
+}
+
 export const useHeroStore = create<HeroState>((set, get) => ({
   archetypes: [],
   origins: ORIGINS,
@@ -97,6 +108,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   primarySetChoices: [],
   secondarySetChoices: [],
   powerPoolChoices: [],
+  preloadedPowers: {},
   selectedPrimary: null,
   selectedSecondary: null,
   selectedPool1: null,
@@ -125,6 +137,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       primarySetChoices: [],
       secondarySetChoices: [],
       powerPoolChoices: [],
+      preloadedPowers: {},
       selectedPrimary: null,
       selectedSecondary: null,
       selectedPool1: null,
@@ -142,25 +155,37 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       totalSlotsAdded: 0,
     });
 
-    // Load powerset choices in parallel
-    const [primary, secondary, pools] = await Promise.all([
-      api.listPowersetChoices(archetype.primary_category),
-      api.listPowersetChoices(archetype.secondary_category),
-      api.listPowersetChoices(archetype.power_pool_category),
+    // Load all powerset data (choices + powers) in parallel
+    const [primaryData, secondaryData, poolData] = await Promise.all([
+      api.loadPowersetsForCategory(archetype.primary_category),
+      api.loadPowersetsForCategory(archetype.secondary_category),
+      api.loadPowersetsForCategory(archetype.power_pool_category),
     ]);
 
+    // Build choices from the preloaded data
+    const toChoices = (data: PowersetWithPowers[]): PowersetCategory[] =>
+      data.map((ps) => ({ powerset_name: ps.powerset_name, display_name: ps.display_name }));
+
+    // Index all powers by powerset name for instant lookup
+    const preloadedPowers = {
+      ...indexPowersets(primaryData),
+      ...indexPowersets(secondaryData),
+      ...indexPowersets(poolData),
+    };
+
     set({
-      primarySetChoices: primary,
-      secondarySetChoices: secondary,
-      powerPoolChoices: pools,
+      primarySetChoices: toChoices(primaryData),
+      secondarySetChoices: toChoices(secondaryData),
+      powerPoolChoices: toChoices(poolData),
+      preloadedPowers,
     });
   },
 
   selectOrigin: (origin) => set({ origin }),
   setHeroName: (name) => set({ heroName: name }),
 
-  selectPowerset: async (slot, ps) => {
-    const powers = await api.loadPowerset(ps.powerset_name);
+  selectPowerset: (slot, ps) => {
+    const powers = get().preloadedPowers[ps.powerset_name] || [];
     switch (slot) {
       case 'primary':
         set({ selectedPrimary: ps.powerset_name, primaryPowers: powers });

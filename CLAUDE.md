@@ -8,6 +8,8 @@ City of Heroes hero planner — a desktop application for selecting archetypes, 
 
 Game data comes from a zip export (`raw_data_*.zip`, ~94MB, 44k JSON files) dropped in the project root. A migration script reads the zip directly into a SQLite database — no extraction needed.
 
+See `notes/game_mechanics.md` for detailed CoH game mechanics reference (power hierarchy, archetypes, effect scaling, enhancements, incarnates, PvP/PvE).
+
 ## Architecture
 
 ```

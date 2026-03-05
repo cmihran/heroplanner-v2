@@ -59,6 +59,7 @@ CREATE TABLE powerset_powers (
     sort_order INTEGER NOT NULL
 );
 CREATE INDEX idx_powerset_powers ON powerset_powers(powerset_id, sort_order);
+CREATE INDEX idx_powerset_powers_name ON powerset_powers(power_name);
 
 CREATE TABLE powers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

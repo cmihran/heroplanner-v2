@@ -53,3 +53,12 @@ body {
 .font-hero {
   font-family: 'paragoncity', sans-serif;
 }
+
+button,
+[role="button"],
+select,
+a,
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}

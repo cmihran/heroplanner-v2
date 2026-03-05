@@ -20,6 +20,12 @@ export interface PowersetCategory {
   display_name: string;
 }
 
+export interface PowersetWithPowers {
+  powerset_name: string;
+  display_name: string;
+  powers: PowerSummary[];
+}
+
 export interface PowerSummary {
   id: number;
   full_name: string;

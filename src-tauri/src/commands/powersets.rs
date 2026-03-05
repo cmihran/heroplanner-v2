@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::db::DbState;
-use crate::models::{PowerSummary, PowersetCategory};
+use crate::models::{PowerSummary, PowersetCategory, PowersetWithPowers};
 
 #[tauri::command]
 pub fn list_powerset_choices(
@@ -14,7 +14,7 @@ pub fn list_powerset_choices(
             "SELECT p.name, p.display_name
              FROM powersets p
              JOIN powerset_categories pc ON p.category_id = pc.id
-             WHERE pc.name = ?1
+             WHERE pc.name = ?1 COLLATE NOCASE
              ORDER BY p.display_name",
         )
         .map_err(|e| e.to_string())?;
@@ -39,6 +39,51 @@ pub fn load_powerset(
     powerset_name: &str,
 ) -> Result<Vec<PowerSummary>, String> {
     let db = state.0.lock().map_err(|e| e.to_string())?;
+    load_powerset_inner(&db, powerset_name)
+}
+
+/// Load all powersets with their powers for a given category in one call.
+#[tauri::command]
+pub fn load_powersets_for_category(
+    state: State<DbState>,
+    category_name: &str,
+) -> Result<Vec<PowersetWithPowers>, String> {
+    let db = state.0.lock().map_err(|e| e.to_string())?;
+
+    // Get all powersets in this category
+    let mut ps_stmt = db
+        .prepare(
+            "SELECT p.name, p.display_name
+             FROM powersets p
+             JOIN powerset_categories pc ON p.category_id = pc.id
+             WHERE pc.name = ?1 COLLATE NOCASE
+             ORDER BY p.display_name",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let powersets: Vec<(String, String)> = ps_stmt
+        .query_map([category_name], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let mut result = Vec::with_capacity(powersets.len());
+    for (name, display_name) in powersets {
+        let powers = load_powerset_inner(&db, &name)?;
+        result.push(PowersetWithPowers {
+            powerset_name: name,
+            display_name,
+            powers,
+        });
+    }
+
+    Ok(result)
+}
+
+fn load_powerset_inner(
+    db: &rusqlite::Connection,
+    powerset_name: &str,
+) -> Result<Vec<PowerSummary>, String> {
     let mut stmt = db
         .prepare(
             "SELECT p.id, p.full_name, p.display_name, p.display_short_help,
