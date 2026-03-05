@@ -34,3 +34,6 @@ src-tauri/target/
 
 # Large data zips
 raw_data_*.zip
+
+# Hero build files
+*.hero

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, Minus, Plus } from 'lucide-react';
+import { Settings as SettingsIcon, Minus, Plus, FolderOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 
 const ZOOM_STEP = 0.1;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3.0;
 const ZOOM_KEY = 'heroplanner-zoom';
+const SAVE_DIR_KEY = 'heroplanner-save-dir';
 const DEFAULT_ZOOM = 1.5;
 
 function getStoredZoom(): number {
@@ -17,6 +18,7 @@ function getStoredZoom(): number {
 
 export function Settings() {
   const [zoom, setZoom] = useState(getStoredZoom);
+  const [saveDir, setSaveDir] = useState(() => localStorage.getItem(SAVE_DIR_KEY) ?? '');
 
   useEffect(() => {
     api.setZoom(zoom);
@@ -27,6 +29,19 @@ export function Settings() {
     setZoom(clamped);
     localStorage.setItem(ZOOM_KEY, String(clamped));
     api.setZoom(clamped);
+  };
+
+  const browseSaveDir = async () => {
+    const dir = await api.pickDirectory(saveDir || undefined);
+    if (dir) {
+      setSaveDir(dir);
+      localStorage.setItem(SAVE_DIR_KEY, dir);
+    }
+  };
+
+  const resetSaveDir = () => {
+    setSaveDir('');
+    localStorage.removeItem(SAVE_DIR_KEY);
   };
 
   return (
@@ -71,6 +86,33 @@ export function Settings() {
               >
                 Reset
               </Button>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-white/60">Save Location</label>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/60 truncate flex-1 min-w-0" title={saveDir || 'Default'}>
+                {saveDir ? saveDir.split('/').pop() : 'Default'}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 border-white/20 text-xs"
+                onClick={browseSaveDir}
+              >
+                <FolderOpen className="h-3 w-3 mr-1" />
+                Browse
+              </Button>
+              {saveDir && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-white/50 hover:text-white/80 h-7 px-2"
+                  onClick={resetSaveDir}
+                >
+                  Reset
+                </Button>
+              )}
             </div>
           </div>
         </div>

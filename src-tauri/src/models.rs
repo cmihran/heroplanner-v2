@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Archetype {
@@ -144,4 +145,53 @@ pub struct BoostInfo {
     pub is_proc: bool,
     pub attuned: bool,
     pub aspects: Vec<String>,
+}
+
+// --- Save/Load build file structs ---
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HeroBuildFile {
+    pub version: u32,
+    pub hero_name: String,
+    pub archetype_name: String,
+    pub origin_name: String,
+    pub selected_primary: Option<String>,
+    pub selected_secondary: Option<String>,
+    pub selected_pool1: Option<String>,
+    pub selected_pool2: Option<String>,
+    pub selected_pool3: Option<String>,
+    pub selected_pool4: Option<String>,
+    pub powers: Vec<SavedPower>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedPower {
+    pub level: i32,
+    pub power_full_name: String,
+    pub num_slots: i32,
+    pub boosts: HashMap<String, SavedBoost>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedBoost {
+    pub boost_key: String,
+    pub set_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedBoost {
+    pub boost_key: String,
+    pub computed_name: Option<String>,
+    pub icon: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LoadBuildResult {
+    pub build: HeroBuildFile,
+    pub file_path: String,
 }

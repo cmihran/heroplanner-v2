@@ -4,11 +4,14 @@ import type {
   BoostSetDetail,
   BoostSetSummary,
   CalculatedEffect,
+  HeroBuildFile,
+  LoadBuildResult,
   NamedTableValues,
   PowerDetail,
   PowerSummary,
   PowersetCategory,
   PowersetWithPowers,
+  ResolvedBoost,
 } from '@/types/models';
 import { mockApi } from './mock-data';
 
@@ -47,4 +50,22 @@ export const api = {
 
   setZoom: (factor: number) =>
     isTauri ? invoke<void>('set_zoom', { factor }) : Promise.resolve(),
+
+  saveBuild: (buildData: HeroBuildFile, defaultDir?: string): Promise<string | null> =>
+    isTauri ? invoke('save_build', { buildData, defaultDir }) : Promise.resolve(null),
+
+  saveBuildToPath: (buildData: HeroBuildFile, path: string): Promise<void> =>
+    isTauri ? invoke('save_build_to_path', { buildData, path }) : Promise.resolve(),
+
+  loadBuild: (defaultDir?: string): Promise<LoadBuildResult | null> =>
+    isTauri ? invoke('load_build', { defaultDir }) : Promise.resolve(null),
+
+  loadBuildFromPath: (path: string): Promise<HeroBuildFile> =>
+    isTauri ? invoke('load_build_from_path', { path }) : Promise.reject('Not in Tauri'),
+
+  resolveBoostKeys: (boostKeys: string[]): Promise<ResolvedBoost[]> =>
+    isTauri ? invoke('resolve_boost_keys', { boostKeys }) : Promise.resolve([]),
+
+  pickDirectory: (defaultDir?: string): Promise<string | null> =>
+    isTauri ? invoke('pick_directory', { defaultDir }) : Promise.resolve(null),
 };

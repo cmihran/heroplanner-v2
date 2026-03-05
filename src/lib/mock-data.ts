@@ -146,4 +146,9 @@ export const mockApi = {
   listArchetypes: () => archetypes,
   loadPowersetsForCategory: (categoryName: string) => getCategory(categoryName),
   setZoom: (_factor: number) => {},
+  saveBuild: () => null,
+  loadBuild: () => null,
+  loadBuildFromPath: () => null,
+  resolveBoostKeys: () => [],
+  pickDirectory: () => null,
 };

@@ -127,6 +127,45 @@ export interface BoostSetBonus {
   is_pvp_bonus: boolean;
 }
 
+// --- Save/Load build types ---
+
+export interface HeroBuildFile {
+  version: number;
+  heroName: string;
+  archetypeName: string;
+  originName: string;
+  selectedPrimary: string | null;
+  selectedSecondary: string | null;
+  selectedPool1: string | null;
+  selectedPool2: string | null;
+  selectedPool3: string | null;
+  selectedPool4: string | null;
+  powers: SavedPower[];
+}
+
+export interface SavedPower {
+  level: number;
+  powerFullName: string;
+  numSlots: number;
+  boosts: Record<string, SavedBoost>;
+}
+
+export interface SavedBoost {
+  boostKey: string;
+  setName: string | null;
+}
+
+export interface ResolvedBoost {
+  boostKey: string;
+  computedName: string | null;
+  icon: string | null;
+}
+
+export interface LoadBuildResult {
+  build: HeroBuildFile;
+  filePath: string;
+}
+
 export interface BoostInfo {
   boost_key: string;
   computed_name: string | null;

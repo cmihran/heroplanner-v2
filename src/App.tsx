@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { Toaster } from 'sonner';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Header } from '@/components/planner/Header';
 import { LeftPanel } from '@/components/planner/LeftPanel';
@@ -29,6 +30,7 @@ function App() {
 
   return (
     <div className="relative h-screen flex flex-col bg-coh-primary text-foreground overflow-hidden rounded-lg border border-coh-secondary">
+      <Toaster position="bottom-right" theme="dark" richColors />
       {edges.map(({ dir, style }) => (
         <div
           key={dir}

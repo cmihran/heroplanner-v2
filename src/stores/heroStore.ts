@@ -1,9 +1,12 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail } from '@/types/models';
+import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail, HeroBuildFile } from '@/types/models';
 
 const LEVEL_SLOTS = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 47, 49];
 const MAX_TOTAL_SLOTS = 67;
+const SAVE_DIR_KEY = 'heroplanner-save-dir';
+const LAST_BUILD_KEY = 'heroplanner-last-build';
 
 const ORIGINS: Origin[] = [
   { name: 'Magic', icon: 'originicon_magic.png' },
@@ -58,6 +61,7 @@ interface HeroState {
   levelToPower: Record<number, SelectedPower | null>;
   powerNameToLevel: Record<string, number>;
   totalSlotsAdded: number;
+  isDirty: boolean;
 
   // Cache
   powerDetailCache: Record<string, PowerDetail>;
@@ -77,6 +81,9 @@ interface HeroState {
   fetchBoostSetDetail: (setName: string) => Promise<BoostSetDetail>;
   setBoostInSlot: (powerName: string, slotIndex: number, boost: SlottedBoost) => void;
   removeBoostFromSlot: (powerName: string, slotIndex: number) => void;
+  saveBuild: () => Promise<void>;
+  loadBuild: () => Promise<void>;
+  loadBuildFromData: (buildFile: HeroBuildFile, filePath?: string, silent?: boolean) => Promise<void>;
 }
 
 function initLevelMap(): Record<number, SelectedPower | null> {
@@ -132,12 +139,25 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   levelToPower: initLevelMap(),
   powerNameToLevel: {},
   totalSlotsAdded: 0,
+  isDirty: false,
   powerDetailCache: {},
   boostSetDetailCache: {},
 
   loadInitialData: async () => {
     const archetypes = await api.listArchetypes();
     set({ archetypes });
+
+    // Auto-load last build
+    const lastPath = localStorage.getItem(LAST_BUILD_KEY);
+    if (lastPath) {
+      try {
+        const build = await api.loadBuildFromPath(lastPath);
+        await get().loadBuildFromData(build, lastPath, true);
+      } catch {
+        toast.warning('Could not load last build — file may have been moved or deleted');
+        localStorage.removeItem(LAST_BUILD_KEY);
+      }
+    }
   },
 
   selectArchetype: async (archetype) => {
@@ -163,6 +183,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       levelToPower: initLevelMap(),
       powerNameToLevel: {},
       totalSlotsAdded: 0,
+      isDirty: true,
       powerDetailCache: {},
       boostSetDetailCache: {},
     });
@@ -193,29 +214,29 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     });
   },
 
-  selectOrigin: (origin) => set({ origin }),
-  setHeroName: (name) => set({ heroName: name }),
+  selectOrigin: (origin) => set({ origin, isDirty: true }),
+  setHeroName: (name) => set({ heroName: name, isDirty: true }),
 
   selectPowerset: (slot, ps) => {
     const powers = get().preloadedPowers[ps.powerset_name] || [];
     switch (slot) {
       case 'primary':
-        set({ selectedPrimary: ps.powerset_name, primaryPowers: powers });
+        set({ selectedPrimary: ps.powerset_name, primaryPowers: powers, isDirty: true });
         break;
       case 'secondary':
-        set({ selectedSecondary: ps.powerset_name, secondaryPowers: powers });
+        set({ selectedSecondary: ps.powerset_name, secondaryPowers: powers, isDirty: true });
         break;
       case 'pool1':
-        set({ selectedPool1: ps.powerset_name, pool1Powers: powers });
+        set({ selectedPool1: ps.powerset_name, pool1Powers: powers, isDirty: true });
         break;
       case 'pool2':
-        set({ selectedPool2: ps.powerset_name, pool2Powers: powers });
+        set({ selectedPool2: ps.powerset_name, pool2Powers: powers, isDirty: true });
         break;
       case 'pool3':
-        set({ selectedPool3: ps.powerset_name, pool3Powers: powers });
+        set({ selectedPool3: ps.powerset_name, pool3Powers: powers, isDirty: true });
         break;
       case 'pool4':
-        set({ selectedPool4: ps.powerset_name, pool4Powers: powers });
+        set({ selectedPool4: ps.powerset_name, pool4Powers: powers, isDirty: true });
         break;
     }
   },
@@ -237,6 +258,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         levelToPower: newLevelToPower,
         powerNameToLevel: newPowerNameToLevel,
         totalSlotsAdded: state.totalSlotsAdded - slotsToReturn,
+        isDirty: true,
       });
     } else {
       // Add power
@@ -253,6 +275,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       set({
         levelToPower: { ...state.levelToPower, [level]: selectedPower },
         powerNameToLevel: { ...state.powerNameToLevel, [power.full_name]: level },
+        isDirty: true,
       });
     }
   },
@@ -273,6 +296,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         [level]: { ...selected, numSlots: selected.numSlots + 1 },
       },
       totalSlotsAdded: state.totalSlotsAdded + 1,
+      isDirty: true,
     });
   },
 
@@ -294,6 +318,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         [level]: { ...selected, numSlots: selected.numSlots - 1, boosts: newBoosts },
       },
       totalSlotsAdded: state.totalSlotsAdded - 1,
+      isDirty: true,
     });
   },
 
@@ -337,6 +362,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
           boosts: { ...selected.boosts, [slotIndex]: boost },
         },
       },
+      isDirty: true,
     });
   },
 
@@ -356,7 +382,198 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         ...state.levelToPower,
         [level]: { ...selected, boosts: newBoosts },
       },
+      isDirty: true,
     });
+  },
+
+  saveBuild: async () => {
+    const state = get();
+    if (!state.archetype) return;
+
+    const powers = Object.values(state.levelToPower)
+      .filter((sp): sp is SelectedPower => sp !== null)
+      .map((sp) => {
+        const boosts: Record<string, { boostKey: string; setName: string | null }> = {};
+        for (const [idx, b] of Object.entries(sp.boosts)) {
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName };
+        }
+        return {
+          level: sp.level,
+          powerFullName: sp.power.full_name,
+          numSlots: sp.numSlots,
+          boosts,
+        };
+      });
+
+    const buildData: HeroBuildFile = {
+      version: 1,
+      heroName: state.heroName,
+      archetypeName: state.archetype.name,
+      originName: state.origin?.name ?? '',
+      selectedPrimary: state.selectedPrimary,
+      selectedSecondary: state.selectedSecondary,
+      selectedPool1: state.selectedPool1,
+      selectedPool2: state.selectedPool2,
+      selectedPool3: state.selectedPool3,
+      selectedPool4: state.selectedPool4,
+      powers,
+    };
+
+    const existingPath = localStorage.getItem(LAST_BUILD_KEY);
+    if (existingPath) {
+      await api.saveBuildToPath(buildData, existingPath);
+      set({ isDirty: false });
+      const fileName = existingPath.split('/').pop() ?? existingPath;
+      toast.success(`Saved ${fileName}`);
+    } else {
+      const defaultDir = localStorage.getItem(SAVE_DIR_KEY) ?? undefined;
+      const savedPath = await api.saveBuild(buildData, defaultDir);
+      if (savedPath) {
+        localStorage.setItem(LAST_BUILD_KEY, savedPath);
+        set({ isDirty: false });
+        const fileName = savedPath.split('/').pop() ?? savedPath;
+        toast.success(`Saved ${fileName}`);
+      }
+    }
+  },
+
+  loadBuild: async () => {
+    const defaultDir = localStorage.getItem(SAVE_DIR_KEY) ?? undefined;
+    const result = await api.loadBuild(defaultDir);
+    if (result) {
+      await get().loadBuildFromData(result.build, result.filePath);
+    }
+  },
+
+  loadBuildFromData: async (buildFile, filePath?, silent?) => {
+    const state = get();
+
+    // 1. Find archetype
+    const archetype = state.archetypes.find((a) => a.name === buildFile.archetypeName);
+    if (!archetype) {
+      toast.error(`Archetype not found: ${buildFile.archetypeName}`);
+      return;
+    }
+
+    // 2. Select archetype (loads all powerset data)
+    await get().selectArchetype(archetype);
+
+    // 3. Set origin and hero name
+    const origin = ORIGINS.find((o) => o.name === buildFile.originName) ?? null;
+    set({ origin, heroName: buildFile.heroName });
+
+    // 4. Select powersets
+    const stateAfterAT = get();
+    const selectPs = (
+      choices: PowersetCategory[],
+      name: string | null,
+      slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4',
+    ) => {
+      if (!name) return;
+      const ps = choices.find((c) => c.powerset_name === name);
+      if (ps) get().selectPowerset(slot, ps);
+    };
+    selectPs(stateAfterAT.primarySetChoices, buildFile.selectedPrimary, 'primary');
+    selectPs(stateAfterAT.secondarySetChoices, buildFile.selectedSecondary, 'secondary');
+    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool1, 'pool1');
+    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool2, 'pool2');
+    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool3, 'pool3');
+    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool4, 'pool4');
+
+    // 5. Build levelToPower map from saved powers
+    const stateAfterPS = get();
+    const newLevelToPower = initLevelMap();
+    const newPowerNameToLevel: Record<string, number> = {};
+    let totalSlotsAdded = 0;
+
+    for (const sp of buildFile.powers) {
+      // Find the PowerSummary in preloaded data
+      let powerSummary: PowerSummary | undefined;
+      for (const powers of Object.values(stateAfterPS.preloadedPowers)) {
+        powerSummary = powers.find((p) => p.full_name === sp.powerFullName);
+        if (powerSummary) break;
+      }
+      if (!powerSummary) continue;
+
+      // Build boosts (without resolved icon/name yet)
+      const boosts: Record<number, SlottedBoost> = {};
+      for (const [idx, saved] of Object.entries(sp.boosts)) {
+        boosts[Number(idx)] = {
+          boostKey: saved.boostKey,
+          icon: null,
+          computedName: null,
+          setName: saved.setName,
+        };
+      }
+
+      const slotsAdded = powerSummary.max_boosts > 0 ? sp.numSlots - 1 : 0;
+      totalSlotsAdded += Math.max(0, slotsAdded);
+
+      newLevelToPower[sp.level] = {
+        level: sp.level,
+        power: powerSummary,
+        numSlots: sp.numSlots,
+        boosts,
+      };
+      newPowerNameToLevel[sp.powerFullName] = sp.level;
+    }
+
+    set({ levelToPower: newLevelToPower, powerNameToLevel: newPowerNameToLevel, totalSlotsAdded });
+
+    // 6. Resolve boost keys to get icons/names
+    const allBoostKeys: string[] = [];
+    for (const sp of buildFile.powers) {
+      for (const saved of Object.values(sp.boosts)) {
+        if (!allBoostKeys.includes(saved.boostKey)) {
+          allBoostKeys.push(saved.boostKey);
+        }
+      }
+    }
+
+    if (allBoostKeys.length > 0) {
+      try {
+        const resolved = await api.resolveBoostKeys(allBoostKeys);
+        const resolvedMap = new Map(resolved.map((r) => [r.boostKey, r]));
+
+        // Update boosts in levelToPower with resolved data
+        const currentState = get();
+        const updatedLevelToPower = { ...currentState.levelToPower };
+        for (const level of LEVEL_SLOTS) {
+          const sp = updatedLevelToPower[level];
+          if (!sp) continue;
+          let changed = false;
+          const updatedBoosts = { ...sp.boosts };
+          for (const [idx, boost] of Object.entries(updatedBoosts)) {
+            const info = resolvedMap.get(boost.boostKey);
+            if (info) {
+              updatedBoosts[Number(idx)] = {
+                ...boost,
+                icon: info.icon,
+                computedName: info.computedName,
+              };
+              changed = true;
+            }
+          }
+          if (changed) {
+            updatedLevelToPower[level] = { ...sp, boosts: updatedBoosts };
+          }
+        }
+        set({ levelToPower: updatedLevelToPower });
+      } catch {
+        toast.warning('Some enhancement data could not be resolved');
+      }
+    }
+
+    // 7. Store last build path and clear dirty flag
+    if (filePath) {
+      localStorage.setItem(LAST_BUILD_KEY, filePath);
+    }
+    set({ isDirty: false });
+
+    if (!silent && filePath) {
+      const fileName = filePath.split('/').pop() ?? filePath;
+      toast.success(`Loaded ${fileName}`);
+    }
   },
 }));
 

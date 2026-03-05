@@ -9,6 +9,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let conn = db::init_db(app.handle());
             app.manage(DbState::new(conn));
@@ -26,6 +27,12 @@ pub fn run() {
             commands::boosts::get_boost_set_detail,
             commands::calc::calculate_power_effects,
             commands::settings::set_zoom,
+            commands::builds::save_build,
+            commands::builds::save_build_to_path,
+            commands::builds::load_build,
+            commands::builds::load_build_from_path,
+            commands::builds::resolve_boost_keys,
+            commands::builds::pick_directory,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
