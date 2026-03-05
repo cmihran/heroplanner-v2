@@ -83,6 +83,7 @@ interface HeroState {
   removeBoostFromSlot: (powerName: string, slotIndex: number) => void;
   swapPowerLevels: (fromLevel: number, toLevel: number) => void;
   saveBuild: () => Promise<void>;
+  saveAsNewBuild: () => Promise<void>;
   loadBuild: () => Promise<void>;
   loadBuildFromData: (buildFile: HeroBuildFile, filePath?: string, silent?: boolean) => Promise<void>;
 }
@@ -467,6 +468,49 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         const fileName = savedPath.split('/').pop() ?? savedPath;
         toast.success(`Saved ${fileName}`);
       }
+    }
+  },
+
+  saveAsNewBuild: async () => {
+    const state = get();
+    if (!state.archetype) return;
+
+    const powers = Object.values(state.levelToPower)
+      .filter((sp): sp is SelectedPower => sp !== null)
+      .map((sp) => {
+        const boosts: Record<string, { boostKey: string; setName: string | null }> = {};
+        for (const [idx, b] of Object.entries(sp.boosts)) {
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName };
+        }
+        return {
+          level: sp.level,
+          powerFullName: sp.power.full_name,
+          numSlots: sp.numSlots,
+          boosts,
+        };
+      });
+
+    const buildData: HeroBuildFile = {
+      version: 1,
+      heroName: state.heroName,
+      archetypeName: state.archetype.name,
+      originName: state.origin?.name ?? '',
+      selectedPrimary: state.selectedPrimary,
+      selectedSecondary: state.selectedSecondary,
+      selectedPool1: state.selectedPool1,
+      selectedPool2: state.selectedPool2,
+      selectedPool3: state.selectedPool3,
+      selectedPool4: state.selectedPool4,
+      powers,
+    };
+
+    const defaultDir = localStorage.getItem(SAVE_DIR_KEY) ?? undefined;
+    const savedPath = await api.saveBuild(buildData, defaultDir);
+    if (savedPath) {
+      localStorage.setItem(LAST_BUILD_KEY, savedPath);
+      set({ isDirty: false });
+      const fileName = savedPath.split('/').pop() ?? savedPath;
+      toast.success(`Saved ${fileName}`);
     }
   },
 

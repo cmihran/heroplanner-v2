@@ -121,7 +121,7 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-6 w-6 rounded-full"
                 onClick={() => addSlot(power.full_name)}
                 disabled={numSlots >= power.max_boosts || !canAddMore()}
               >
@@ -130,7 +130,7 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-6 w-6 rounded-full"
                 onClick={() => removeSlot(power.full_name)}
                 disabled={numSlots <= 0}
               >
