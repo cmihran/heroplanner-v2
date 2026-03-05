@@ -81,6 +81,7 @@ interface HeroState {
   fetchBoostSetDetail: (setName: string) => Promise<BoostSetDetail>;
   setBoostInSlot: (powerName: string, slotIndex: number, boost: SlottedBoost) => void;
   removeBoostFromSlot: (powerName: string, slotIndex: number) => void;
+  swapPowerLevels: (fromLevel: number, toLevel: number) => void;
   saveBuild: () => Promise<void>;
   loadBuild: () => Promise<void>;
   loadBuildFromData: (buildFile: HeroBuildFile, filePath?: string, silent?: boolean) => Promise<void>;
@@ -384,6 +385,38 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       },
       isDirty: true,
     });
+  },
+
+  swapPowerLevels: (fromLevel, toLevel) => {
+    if (fromLevel === toLevel) return;
+    const state = get();
+    const fromPower = state.levelToPower[fromLevel];
+    const toPower = state.levelToPower[toLevel];
+
+    // Nothing to move
+    if (!fromPower && !toPower) return;
+
+    // Validate available_level constraints
+    if (fromPower && fromPower.power.available_level > toLevel) {
+      toast.error(`${fromPower.power.display_name} requires level ${fromPower.power.available_level}+`);
+      return;
+    }
+    if (toPower && toPower.power.available_level > fromLevel) {
+      toast.error(`${toPower.power.display_name} requires level ${toPower.power.available_level}+`);
+      return;
+    }
+
+    // Swap
+    const newLevelToPower = { ...state.levelToPower };
+    const newPowerNameToLevel = { ...state.powerNameToLevel };
+
+    newLevelToPower[fromLevel] = toPower ? { ...toPower, level: fromLevel } : null;
+    newLevelToPower[toLevel] = fromPower ? { ...fromPower, level: toLevel } : null;
+
+    if (fromPower) newPowerNameToLevel[fromPower.power.full_name] = toLevel;
+    if (toPower) newPowerNameToLevel[toPower.power.full_name] = fromLevel;
+
+    set({ levelToPower: newLevelToPower, powerNameToLevel: newPowerNameToLevel, isDirty: true });
   },
 
   saveBuild: async () => {
