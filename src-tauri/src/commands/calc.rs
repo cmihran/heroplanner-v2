@@ -1,11 +1,143 @@
 use std::collections::HashMap;
+use rusqlite::Connection;
 use tauri::State;
 
 use super::utils::{categorize_attrib, format_scale};
 use crate::db::DbState;
 use crate::models::{
-    ActiveSetBonus, CalculatedEffect, CombinedStat, SlottedSetInfo, StatSource, TotalStatsResult,
+    ActiveSetBonus, CalculatedEffect, CombinedStat, PowerSlottedEnhancements,
+    SlottedEnhancement, SlottedSetInfo, StatSource, TotalStatsResult,
 };
+
+/// Compute per-attrib enhancement strengths from slotted enhancements.
+/// Returns: attrib_name -> total enhancement strength (as a fraction, e.g. 0.40 = 40%)
+fn compute_enhancement_strengths(
+    db: &Connection,
+    archetype_id: i64,
+    enhancements: &[SlottedEnhancement],
+    char_level: usize,
+) -> HashMap<String, f64> {
+    let mut strengths: HashMap<String, f64> = HashMap::new();
+
+    for enh in enhancements {
+        let enh_level = if enh.is_attuned {
+            char_level
+        } else {
+            enh.level.unwrap_or(50).saturating_sub(1).max(0) as usize
+        };
+
+        // Get enhancement effect templates (attribs, table, scale)
+        let effect_data = get_enhancement_effect_data(db, &enh.boost_key);
+
+        for (attribs, table_name, scale) in effect_data {
+            // Look up scaling table value at enhancement level
+            let table_value: f64 = db
+                .query_row(
+                    "SELECT values_json FROM archetype_tables
+                     WHERE archetype_id = ?1 AND table_name = ?2",
+                    rusqlite::params![archetype_id, table_name.to_lowercase()],
+                    |row| row.get::<_, String>(0),
+                )
+                .ok()
+                .and_then(|json| {
+                    let values: Vec<f64> = serde_json::from_str(&json).ok()?;
+                    values.get(enh_level).copied()
+                })
+                .unwrap_or(0.0);
+
+            let strength = table_value * scale;
+            for attrib in &attribs {
+                *strengths.entry(attrib.clone()).or_default() += strength;
+            }
+        }
+    }
+
+    strengths
+}
+
+/// Get enhancement effect data: Vec of (attribs, table_name, scale).
+/// Tries powers table first (works for set boosts and plain IO raw keys),
+/// then falls back to boosts.raw_json (for plain IO aliases like "Enhance Accuracy").
+fn get_enhancement_effect_data(
+    db: &Connection,
+    boost_key: &str,
+) -> Vec<(Vec<String>, String, f64)> {
+    // Path A: Look up in powers table via naming convention
+    let power_full_name = format!("boosts.{}.{}", boost_key, boost_key);
+    let power_id = db.query_row(
+        "SELECT id FROM powers WHERE LOWER(full_name) = LOWER(?1)",
+        [&power_full_name],
+        |row| row.get::<_, i64>(0),
+    );
+
+    if let Ok(pid) = power_id {
+        if let Ok(mut stmt) = db.prepare(
+            "SELECT et.attribs_json, et.table_name, et.scale
+             FROM power_effects pe
+             JOIN effect_templates et ON et.effect_id = pe.id
+             WHERE pe.power_id = ?1",
+        ) {
+            let results: Vec<_> = stmt
+                .query_map([pid], |row| {
+                    let attribs_json: String = row.get(0)?;
+                    let table_name: String = row.get(1)?;
+                    let scale: f64 = row.get(2)?;
+                    let attribs: Vec<String> =
+                        serde_json::from_str(&attribs_json).unwrap_or_default();
+                    Ok((attribs, table_name, scale))
+                })
+                .ok()
+                .map(|rows| rows.filter_map(|r| r.ok()).collect())
+                .unwrap_or_default();
+
+            if !results.is_empty() {
+                return results;
+            }
+        }
+    }
+
+    // Path B: Extract from boosts.raw_json (plain IO aliases)
+    let raw_json: Option<String> = db
+        .query_row(
+            "SELECT raw_json FROM boosts WHERE boost_key = ?1",
+            [boost_key],
+            |row| row.get(0),
+        )
+        .ok();
+
+    if let Some(json_str) = raw_json {
+        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json_str) {
+            if let Some(effects) = data.get("effects").and_then(|e| e.as_array()) {
+                let mut results = Vec::new();
+                for effect in effects {
+                    if let Some(templates) = effect.get("templates").and_then(|t| t.as_array()) {
+                        for template in templates {
+                            let table = template
+                                .get("table")
+                                .and_then(|t| t.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            let scale = template
+                                .get("scale")
+                                .and_then(|s| s.as_f64())
+                                .unwrap_or(0.0);
+                            let attribs: Vec<String> = template
+                                .get("attribs")
+                                .and_then(|a| serde_json::from_value(a.clone()).ok())
+                                .unwrap_or_default();
+                            if !table.is_empty() && !attribs.is_empty() {
+                                results.push((attribs, table, scale));
+                            }
+                        }
+                    }
+                }
+                return results;
+            }
+        }
+    }
+
+    Vec::new()
+}
 
 #[tauri::command]
 pub fn calculate_power_effects(
@@ -13,8 +145,12 @@ pub fn calculate_power_effects(
     archetype_id: i64,
     power_full_name: &str,
     level: usize,
+    enhancements: Vec<SlottedEnhancement>,
 ) -> Result<Vec<CalculatedEffect>, String> {
     let db = state.0.lock().map_err(|e| e.to_string())?;
+
+    // Compute enhancement strengths per attrib
+    let enh_strengths = compute_enhancement_strengths(&db, archetype_id, &enhancements, level);
 
     // Get power id
     let power_id: i64 = db
@@ -83,7 +219,17 @@ pub fn calculate_power_effects(
                 });
 
             if let Some(tv) = table_value {
-                let magnitude = tv * scale;
+                let base_magnitude = tv * scale;
+
+                // Apply enhancement bonus: find max matching enhancement strength
+                let enh_bonus = attribs
+                    .iter()
+                    .filter_map(|a| enh_strengths.get(a))
+                    .cloned()
+                    .fold(0.0_f64, f64::max);
+
+                let magnitude = base_magnitude * (1.0 + enh_bonus);
+
                 let display_value = if aspect != "Absolute" {
                     format!("{:.2}%", magnitude * 100.0)
                 } else {
@@ -112,8 +258,19 @@ pub fn calculate_total_stats(
     level: usize,
     active_power_names: Vec<String>,
     slotted_sets: Vec<SlottedSetInfo>,
+    power_enhancements: Vec<PowerSlottedEnhancements>,
 ) -> Result<TotalStatsResult, String> {
     let db = state.0.lock().map_err(|e| e.to_string())?;
+
+    // Build enhancement strengths per power
+    let mut enh_by_power: HashMap<String, HashMap<String, f64>> = HashMap::new();
+    for pe in &power_enhancements {
+        if !pe.enhancements.is_empty() {
+            let strengths =
+                compute_enhancement_strengths(&db, archetype_id, &pe.enhancements, level);
+            enh_by_power.insert(pe.power_full_name.clone(), strengths);
+        }
+    }
 
     // Per-source accumulator: (category, label) -> vec of (source_name, magnitude, aspect)
     let mut sources_acc: HashMap<(String, String), Vec<(String, f64, String)>> = HashMap::new();
@@ -199,9 +356,18 @@ pub fn calculate_total_stats(
             None => continue,
         };
 
+        // Get enhancement strengths for this power (if any)
+        let enh_strengths = enh_by_power.get(power_name);
+
         // Sum end drain for Toggle powers
         if power_type == "Toggle" {
-            end_drain += endurance_cost;
+            // Apply endurance discount from enhancements
+            let end_discount = enh_strengths
+                .and_then(|s| s.get("EnduranceDiscount"))
+                .copied()
+                .unwrap_or(0.0);
+            let effective_end_cost = endurance_cost / (1.0 + end_discount);
+            end_drain += effective_end_cost;
         }
 
         // Get effects (filter: not PVP_ONLY, guaranteed chance)
@@ -270,7 +436,21 @@ pub fn calculate_total_stats(
                     });
 
                 if let Some(tv) = table_value {
-                    let magnitude = tv * scale;
+                    let base_magnitude = tv * scale;
+
+                    // Apply enhancement bonus
+                    let enh_bonus = enh_strengths
+                        .map(|s| {
+                            attribs
+                                .iter()
+                                .filter_map(|a| s.get(a))
+                                .cloned()
+                                .fold(0.0_f64, f64::max)
+                        })
+                        .unwrap_or(0.0);
+
+                    let magnitude = base_magnitude * (1.0 + enh_bonus);
+
                     for attrib in &attribs {
                         let (cat, label) = categorize_attrib(attrib, &aspect);
                         if cat == "Skip" {

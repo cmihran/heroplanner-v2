@@ -223,6 +223,23 @@ pub struct InherentPowersResult {
     pub fitness_powers: Vec<InherentPowerInfo>,
 }
 
+// --- Enhancement calculation input ---
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SlottedEnhancement {
+    pub boost_key: String,
+    pub level: Option<i32>,
+    pub is_attuned: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PowerSlottedEnhancements {
+    pub power_full_name: String,
+    pub enhancements: Vec<SlottedEnhancement>,
+}
+
 // --- Save/Load build file structs ---
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

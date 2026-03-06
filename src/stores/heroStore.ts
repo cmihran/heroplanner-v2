@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { IO_ICONS } from '@/lib/enhancement-data';
-import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail, HeroBuildFile, TotalStatsResult, SlottedSetInfo } from '@/types/models';
+import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail, HeroBuildFile, TotalStatsResult, SlottedSetInfo, PowerSlottedEnhancements } from '@/types/models';
 
 const LEVEL_SLOTS = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 47, 49];
 const MAX_TOTAL_SLOTS = 67;
@@ -519,12 +519,27 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       slottedSets.push({ setName, count, powerFullName });
     }
 
+    // Collect per-power enhancement data for active powers
+    const powerEnhancements: PowerSlottedEnhancements[] = [];
+    for (const sp of Object.values(state.levelToPower)) {
+      if (!sp || !sp.isActive) continue;
+      const enhancements = Object.values(sp.boosts).map((b) => ({
+        boostKey: b.boostKey,
+        level: b.level,
+        isAttuned: b.isAttuned,
+      }));
+      if (enhancements.length > 0) {
+        powerEnhancements.push({ powerFullName: sp.power.full_name, enhancements });
+      }
+    }
+
     try {
       const result = await api.calculateTotalStats(
         state.archetype.id,
         49, // level 50 (0-indexed)
         activePowerNames,
         slottedSets,
+        powerEnhancements,
       );
       set({ totalStatsResult: result, totalStatsLoading: false });
     } catch (err) {

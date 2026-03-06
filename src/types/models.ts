@@ -147,6 +147,19 @@ export interface InherentPowersResult {
   fitnessPowers: InherentPowerInfo[];
 }
 
+// --- Enhancement calculation input ---
+
+export interface SlottedEnhancement {
+  boostKey: string;
+  level: number | null;
+  isAttuned: boolean;
+}
+
+export interface PowerSlottedEnhancements {
+  powerFullName: string;
+  enhancements: SlottedEnhancement[];
+}
+
 // --- Save/Load build types ---
 
 export interface HeroBuildFile {

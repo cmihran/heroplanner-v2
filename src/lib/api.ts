@@ -9,10 +9,12 @@ import type {
   LoadBuildResult,
   NamedTableValues,
   PowerDetail,
+  PowerSlottedEnhancements,
   PowerSummary,
   PowersetCategory,
   PowersetWithPowers,
   ResolvedBoost,
+  SlottedEnhancement,
   SlottedSetInfo,
   TotalStatsResult,
 } from '@/types/models';
@@ -53,8 +55,8 @@ export const api = {
   getBoostSetDetail: (setName: string) =>
     isTauri ? invoke<BoostSetDetail>('get_boost_set_detail', { setName }) : Promise.resolve({} as BoostSetDetail),
 
-  calculatePowerEffects: (archetypeId: number, powerFullName: string, level: number) =>
-    isTauri ? invoke<CalculatedEffect[]>('calculate_power_effects', { archetypeId, powerFullName, level }) : Promise.resolve([]),
+  calculatePowerEffects: (archetypeId: number, powerFullName: string, level: number, enhancements: SlottedEnhancement[] = []) =>
+    isTauri ? invoke<CalculatedEffect[]>('calculate_power_effects', { archetypeId, powerFullName, level, enhancements }) : Promise.resolve([]),
 
   setZoom: (factor: number) =>
     isTauri ? invoke<void>('set_zoom', { factor }) : Promise.resolve(),
@@ -82,9 +84,10 @@ export const api = {
     level: number,
     activePowerNames: string[],
     slottedSets: SlottedSetInfo[],
+    powerEnhancements: PowerSlottedEnhancements[] = [],
   ): Promise<TotalStatsResult> =>
     isTauri
-      ? invoke('calculate_total_stats', { archetypeId, level, activePowerNames, slottedSets })
+      ? invoke('calculate_total_stats', { archetypeId, level, activePowerNames, slottedSets, powerEnhancements })
       : Promise.resolve({
           combinedStats: [],
           activeBonuses: [],
