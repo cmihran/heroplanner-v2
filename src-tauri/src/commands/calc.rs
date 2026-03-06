@@ -9,15 +9,33 @@ use crate::models::{
     SlottedEnhancement, SlottedSetInfo, StatSource, TotalStatsResult,
 };
 
-/// Compute per-attrib enhancement strengths from slotted enhancements.
-/// Returns: attrib_name -> total enhancement strength (as a fraction, e.g. 0.40 = 40%)
+/// Enhancement Diversification (ED): 3-zone piecewise diminishing returns.
+/// Input: raw sum of enhancement strengths for one attrib type.
+/// Output: effective strength after ED.
+fn apply_ed(raw: f64) -> f64 {
+    const ZONE1_CAP: f64 = 0.40; // 100% effectiveness up to 40%
+    const ZONE2_CAP: f64 = 0.70; // 60% effectiveness from 40-70%
+    const ZONE2_EFF: f64 = 0.60;
+    const ZONE3_EFF: f64 = 0.10; // 10% effectiveness above 70%
+
+    if raw <= ZONE1_CAP {
+        raw
+    } else if raw <= ZONE2_CAP {
+        ZONE1_CAP + (raw - ZONE1_CAP) * ZONE2_EFF
+    } else {
+        ZONE1_CAP + (ZONE2_CAP - ZONE1_CAP) * ZONE2_EFF + (raw - ZONE2_CAP) * ZONE3_EFF
+    }
+}
+
+/// Compute per-attrib enhancement strengths from slotted enhancements, with ED applied.
+/// Returns: attrib_name -> effective enhancement strength (after diminishing returns)
 fn compute_enhancement_strengths(
     db: &Connection,
     archetype_id: i64,
     enhancements: &[SlottedEnhancement],
     char_level: usize,
 ) -> HashMap<String, f64> {
-    let mut strengths: HashMap<String, f64> = HashMap::new();
+    let mut raw_strengths: HashMap<String, f64> = HashMap::new();
 
     for enh in enhancements {
         let enh_level = if enh.is_attuned {
@@ -47,12 +65,16 @@ fn compute_enhancement_strengths(
 
             let strength = table_value * scale;
             for attrib in &attribs {
-                *strengths.entry(attrib.clone()).or_default() += strength;
+                *raw_strengths.entry(attrib.clone()).or_default() += strength;
             }
         }
     }
 
-    strengths
+    // Apply ED to each attrib's total raw strength
+    raw_strengths
+        .into_iter()
+        .map(|(attrib, raw)| (attrib, apply_ed(raw)))
+        .collect()
 }
 
 /// Get enhancement effect data: Vec of (attribs, table_name, scale).
