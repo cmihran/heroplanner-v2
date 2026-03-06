@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useHeroStore } from '@/stores/heroStore';
 import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
+import { condenseAttribs } from '@/lib/utils';
 import { Lock, Unlock, ChevronDown, ChevronUp } from 'lucide-react';
 import type { PowerDetail, CalculatedEffect, BoostSetDetail, EnhancementStrength } from '@/types/models';
 
@@ -14,6 +15,8 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
   const [detail, setDetail] = useState<PowerDetail | null>(null);
   const [baseEffects, setBaseEffects] = useState<CalculatedEffect[]>([]);
   const [enhancedEffects, setEnhancedEffects] = useState<CalculatedEffect[] | null>(null);
+  const [enhancedRecharge, setEnhancedRecharge] = useState<number | null>(null);
+  const [enhancedEndurance, setEnhancedEndurance] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,8 +24,8 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
       if (!cancelled) {
         setDetail(d);
         if (archetype) {
-          api.calculatePowerEffects(archetype.id, powerFullName, 49, []).then((effects) => {
-            if (!cancelled) setBaseEffects(effects);
+          api.calculatePowerEffects(archetype.id, powerFullName, 49, []).then((result) => {
+            if (!cancelled) setBaseEffects(result.effects);
           });
 
           const level = useHeroStore.getState().powerNameToLevel[powerFullName];
@@ -32,9 +35,14 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
               boostKey: b.boostKey,
               level: b.level,
               isAttuned: b.isAttuned,
+              boostLevel: b.boostLevel,
             }));
-            api.calculatePowerEffects(archetype.id, powerFullName, 49, enhs).then((effects) => {
-              if (!cancelled) setEnhancedEffects(effects);
+            api.calculatePowerEffects(archetype.id, powerFullName, 49, enhs).then((result) => {
+              if (!cancelled) {
+                setEnhancedEffects(result.effects);
+                setEnhancedRecharge(result.enhancedRecharge);
+                setEnhancedEndurance(result.enhancedEndurance);
+              }
             });
           }
         }
@@ -65,8 +73,14 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
         {detail.accuracy > 0 && <div><span className="text-muted-foreground">Accuracy:</span> {detail.accuracy}x</div>}
-        {detail.endurance_cost > 0 && <div><span className="text-muted-foreground">End:</span> {detail.endurance_cost.toFixed(2)}{detail.power_type === 'Toggle' ? '/s' : ''}</div>}
-        {detail.recharge_time > 0 && <div><span className="text-muted-foreground">Recharge:</span> {detail.recharge_time.toFixed(2)}s</div>}
+        {detail.endurance_cost > 0 && <div>
+          <span className="text-muted-foreground">End:</span> {detail.endurance_cost.toFixed(2)}{detail.power_type === 'Toggle' ? '/s' : ''}
+          {enhancedEndurance != null && <span className="text-emerald-400"> → {enhancedEndurance.toFixed(2)}{detail.power_type === 'Toggle' ? '/s' : ''}</span>}
+        </div>}
+        {detail.recharge_time > 0 && <div>
+          <span className="text-muted-foreground">Recharge:</span> {detail.recharge_time.toFixed(2)}s
+          {enhancedRecharge != null && <span className="text-emerald-400"> → {enhancedRecharge.toFixed(2)}s</span>}
+        </div>}
         {detail.activation_time > 0 && <div><span className="text-muted-foreground">Cast:</span> {detail.activation_time.toFixed(2)}s</div>}
         {detail.range > 0 && <div><span className="text-muted-foreground">Range:</span> {detail.range}ft</div>}
         {detail.radius > 0 && <div><span className="text-muted-foreground">Radius:</span> {detail.radius}ft</div>}
@@ -81,7 +95,7 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
             const isEnhanced = enhanced && enhanced.display_value !== effect.display_value;
             return (
               <div key={i} className="text-[0.6875rem] flex items-center gap-1">
-                <span className="text-muted-foreground">{effect.attribs.join(', ')}:</span>
+                <span className="text-muted-foreground">{condenseAttribs(effect.attribs)}:</span>
                 <span>{effect.display_value}</span>
                 {isEnhanced && <span className="text-emerald-400">→ {enhanced.display_value}</span>}
               </div>

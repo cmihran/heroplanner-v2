@@ -41,6 +41,12 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
     </span>
   ) : null;
 
+  const boostBadge = boost && boost.boostLevel > 0 ? (
+    <span className="absolute -top-0.5 -right-0.5 min-w-[0.875rem] h-[0.875rem] flex items-center justify-center rounded-full bg-cyan-600 border border-cyan-400/50 text-[0.5rem] font-bold text-white leading-none z-10 px-0.5">
+      +{boost.boostLevel}
+    </span>
+  ) : null;
+
   const slotButton = boost?.icon ? (
     <button
       className={`relative w-[2.5rem] h-[2.5rem] flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80 rounded-full ${
@@ -49,6 +55,7 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
     >
       <img src={imageUrl(boost.icon)} alt={boost.computedName ?? ''} className="w-[2.5rem] h-[2.5rem]" />
       {levelBadge}
+      {boostBadge}
     </button>
   ) : (
     <button

@@ -5,19 +5,19 @@ i shouldnt be able to un-attune certain sets like the archetype enhancements. al
 we need to implement IO enhancement boosts like +1 +2 +3
 
 
-condense enhancement values like damage if they all scale all damage equally. defense and res too
+in power effects and enhancement detail views, condense enhancement values like damage if they all scale all damage equally. defense and res too
 
-when i slot recharge anbd endurance cost reduction on a power i dont see the recharge go down and get enhanced
+when i slot recharge and endurance cost reduction on a power i dont see the recharge go down and get enhanced with the green arrow
 
 remove markdown files from the watcher for make dev
 
 the dropdown arrow on the far right of powersets selection is covered by the middle pane separator
 
 
-clicking close on the dont save popup after clicking the x button doesnt close the window
+clicking close on the dont save popup after clicking the x button doesnt close the window. sometimes clicking the x doesnt seem to do anything
 
 
-the red bar under endurance drain should show how red the current net end gain is. it doesnt seem to reflect when i turn powers on and off
+the red bar under endurance drain should show how red the current net end gain is. it doesnt seem to move when i turn powers on and off
 
 
 

@@ -25,7 +25,7 @@ export default defineConfig({
         }
       : undefined,
     watch: {
-      ignored: ['**/src-tauri/**', '**/*.hero'],
+      ignored: ['**/src-tauri/**', '**/*.hero', '**/*.md'],
     },
   },
 });

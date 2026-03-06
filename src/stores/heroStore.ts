@@ -105,6 +105,7 @@ interface HeroState {
   setInherentBoost: (powerName: string, slotIndex: number, boost: SlottedBoost) => void;
   removeInherentBoost: (powerName: string, slotIndex: number) => void;
   toggleInherentActive: (powerName: string) => void;
+  setBoostLevel: (powerName: string, slotIndex: number, boostLevel: number) => void;
   setDetailPaneTarget: (target: { type: 'power' | 'enhancement'; key: string; powerName?: string } | null) => void;
   toggleDetailPaneLock: () => void;
   toggleDetailPaneMinimized: () => void;
@@ -669,6 +670,26 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     });
   },
 
+  setBoostLevel: (powerName, slotIndex, boostLevel) => {
+    const state = get();
+    const level = state.powerNameToLevel[powerName];
+    if (level === undefined) return;
+    const selected = state.levelToPower[level];
+    if (!selected) return;
+    const boost = selected.boosts[slotIndex];
+    if (!boost) return;
+    set({
+      levelToPower: {
+        ...state.levelToPower,
+        [level]: {
+          ...selected,
+          boosts: { ...selected.boosts, [slotIndex]: { ...boost, boostLevel } },
+        },
+      },
+      isDirty: true,
+    });
+  },
+
   setDetailPaneTarget: (target) => {
     if (get().detailPaneLocked) return;
     set({ detailPaneTarget: target });
@@ -748,6 +769,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         boostKey: b.boostKey,
         level: b.level,
         isAttuned: b.isAttuned,
+        boostLevel: b.boostLevel,
       }));
       if (enhancements.length > 0) {
         powerEnhancements.push({ powerFullName: sp.power.full_name, enhancements });
@@ -760,6 +782,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         boostKey: b.boostKey,
         level: b.level,
         isAttuned: b.isAttuned,
+        boostLevel: b.boostLevel,
       }));
       if (enhancements.length > 0) {
         powerEnhancements.push({ powerFullName: powerName, enhancements });
@@ -800,9 +823,9 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     const powers = Object.values(state.levelToPower)
       .filter((sp): sp is SelectedPower => sp !== null)
       .map((sp) => {
-        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
+        const boosts: Record<string, { boostKey: string; setName: string | null; setGroupName: string | null; level: number | null; isAttuned: boolean; boostLevel: number }> = {};
         for (const [idx, b] of Object.entries(sp.boosts)) {
-          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, setGroupName: b.setGroupName, level: b.level, isAttuned: b.isAttuned, boostLevel: b.boostLevel };
         }
         return {
           level: sp.level,
@@ -816,9 +839,9 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     const inherentPowers = Object.entries(state.inherentSlots)
       .filter(([, s]) => s.numSlots > 0 || !s.isActive)
       .map(([powerName, s]) => {
-        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
+        const boosts: Record<string, { boostKey: string; setName: string | null; setGroupName: string | null; level: number | null; isAttuned: boolean; boostLevel: number }> = {};
         for (const [idx, b] of Object.entries(s.boosts)) {
-          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, setGroupName: b.setGroupName, level: b.level, isAttuned: b.isAttuned, boostLevel: b.boostLevel };
         }
         return { level: 1, powerFullName: powerName, numSlots: s.numSlots, boosts, isActive: s.isActive };
       });
@@ -863,9 +886,9 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     const powers = Object.values(state.levelToPower)
       .filter((sp): sp is SelectedPower => sp !== null)
       .map((sp) => {
-        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
+        const boosts: Record<string, { boostKey: string; setName: string | null; setGroupName: string | null; level: number | null; isAttuned: boolean; boostLevel: number }> = {};
         for (const [idx, b] of Object.entries(sp.boosts)) {
-          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, setGroupName: b.setGroupName, level: b.level, isAttuned: b.isAttuned, boostLevel: b.boostLevel };
         }
         return {
           level: sp.level,
@@ -879,9 +902,9 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     const inherentPowers = Object.entries(state.inherentSlots)
       .filter(([, s]) => s.numSlots > 0 || !s.isActive)
       .map(([powerName, s]) => {
-        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
+        const boosts: Record<string, { boostKey: string; setName: string | null; setGroupName: string | null; level: number | null; isAttuned: boolean; boostLevel: number }> = {};
         for (const [idx, b] of Object.entries(s.boosts)) {
-          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, setGroupName: b.setGroupName, level: b.level, isAttuned: b.isAttuned, boostLevel: b.boostLevel };
         }
         return { level: 1, powerFullName: powerName, numSlots: s.numSlots, boosts, isActive: s.isActive };
       });
@@ -989,8 +1012,10 @@ export const useHeroStore = create<HeroState>((set, get) => ({
           icon: null,
           computedName: null,
           setName: saved.setName,
+          setGroupName: saved.setGroupName ?? null,
           level: saved.level ?? null,
           isAttuned: saved.isAttuned ?? false,
+          boostLevel: saved.boostLevel ?? 0,
         };
       }
 
@@ -1024,8 +1049,10 @@ export const useHeroStore = create<HeroState>((set, get) => ({
             icon: null,
             computedName: null,
             setName: saved.setName,
+            setGroupName: saved.setGroupName ?? null,
             level: saved.level ?? null,
             isAttuned: saved.isAttuned ?? false,
+            boostLevel: saved.boostLevel ?? 0,
           };
         }
         newInherentSlots[sp.powerFullName] = {

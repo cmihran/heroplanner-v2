@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useHeroStore } from '@/stores/heroStore';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Shield, Blocks, Crosshair, Footprints, ShieldCheck, Heart, Settings, Hammer, Sword, Flame, Snowflake, Zap, Skull, Brain, FlaskConical, Swords, Target, Expand } from 'lucide-react';
 import type { CombinedStat, StatCap, StatSource, TotalStatsResult } from '@/types/models';
 
 const CATEGORY_ORDER = ['Offense', 'Defense', 'Resistance', 'Movement', 'Status Resistance', 'Recovery', 'Misc'];
@@ -9,29 +9,29 @@ const VITAL_LABELS = new Set(['Max HP', 'Regeneration', 'Max End', 'Recovery', '
 
 const SHIMMER_KEY = 'heroplanner-shimmer';
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'Defense': '\u{1F6E1}',       // shield
-  'Resistance': '\u{1F9F1}',    // brick/wall
-  'Offense': '\u{1F3AF}',       // target/crosshairs
-  'Damage': '\u{2694}',         // crossed swords
-  'Movement': '\u{1F3C3}',      // running figure
-  'Status Resistance': '\u26D3', // chains
-  'Recovery': '\u2764',          // heart
-  'Misc': '\u2699',              // gear
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  'Defense': Shield,
+  'Resistance': Blocks,
+  'Offense': Crosshair,
+  'Damage': Swords,
+  'Movement': Footprints,
+  'Status Resistance': ShieldCheck,
+  'Recovery': Heart,
+  'Misc': Settings,
 };
 
-const DAMAGE_TYPE_ICONS: Record<string, string> = {
-  'Smashing': '\u{1F44A}',       // fist
-  'Lethal': '\u{1F5E1}',         // dagger
-  'Fire': '\u{1F525}',           // flame
-  'Cold': '\u2744',              // snowflake
-  'Energy': '\u26A1',            // lightning
-  'Negative Energy': '\u{1F480}', // skull
-  'Psionic': '\u{1F9E0}',        // brain
-  'Toxic': '\u2623',             // biohazard
-  'Melee': '\u2694',             // crossed swords
-  'Ranged': '\u{1F3F9}',         // bow and arrow
-  'AoE': '\u{1F4A5}',            // explosion
+const DAMAGE_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  'Smashing': Hammer,
+  'Lethal': Sword,
+  'Fire': Flame,
+  'Cold': Snowflake,
+  'Energy': Zap,
+  'Negative Energy': Skull,
+  'Psionic': Brain,
+  'Toxic': FlaskConical,
+  'Melee': Swords,
+  'Ranged': Target,
+  'AoE': Expand,
 };
 
 const DEFENSE_BAR_COLOR = 'rgba(168,85,247,0.25)';
@@ -86,7 +86,7 @@ function StatRow({ stat, barColor, cap, showDamageTypeIcon }: { stat: CombinedSt
     }
   }
   const atCap = cap && stat.totalValue >= cap.capValue - 0.001;
-  const dmgIcon = showDamageTypeIcon ? DAMAGE_TYPE_ICONS[stat.label] : undefined;
+  const DmgIcon = showDamageTypeIcon ? DAMAGE_TYPE_ICONS[stat.label] : undefined;
 
   const Row = hasSources ? 'button' : 'div';
 
@@ -122,7 +122,7 @@ function StatRow({ stat, barColor, cap, showDamageTypeIcon }: { stat: CombinedSt
             <ChevronRight className={`h-3 w-3 text-slate-500 transition-transform ${expanded ? 'rotate-90' : ''}`} />
           )}
           {!hasSources && <span className="w-3" />}
-          {dmgIcon && <span className="text-[0.6875rem] opacity-60">{dmgIcon}</span>}
+          {DmgIcon && <DmgIcon className="h-3 w-3 opacity-60" />}
           {stat.label}
         </span>
         <span className="relative font-mono text-slate-100">
@@ -362,7 +362,7 @@ function CategorySection({ category, entries, damageEntries, capMap }: { categor
   const hasZeros = (category === 'Defense' || category === 'Resistance') && entries.some((s) => s.totalValue === 0);
   const visible = hasZeros && !showAll ? entries.filter((s) => s.totalValue !== 0 || s.sources.length > 0) : entries;
   const showDmgIcons = category === 'Defense' || category === 'Resistance';
-  const catIcon = CATEGORY_ICONS[category];
+  const CatIcon = CATEGORY_ICONS[category];
 
   return (
     <div className="rounded-lg overflow-hidden">
@@ -372,7 +372,7 @@ function CategorySection({ category, entries, damageEntries, capMap }: { categor
           className="flex-1 px-3 py-1.5 flex items-center gap-1.5 hover:bg-white/[0.06] transition-colors cursor-pointer"
         >
           <ChevronRight className={`h-3 w-3 text-slate-500 transition-transform ${collapsed ? '' : 'rotate-90'}`} />
-          {catIcon && <span className="text-[0.6875rem] opacity-50">{catIcon}</span>}
+          {CatIcon && <CatIcon className="h-3 w-3 opacity-50" />}
           <h3 className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-wider">
             {category}
           </h3>
@@ -406,6 +406,7 @@ export function TotalStatsTab() {
   const totalStatsResult = useHeroStore((s) => s.totalStatsResult);
   const totalStatsLoading = useHeroStore((s) => s.totalStatsLoading);
   const refreshTotalStats = useHeroStore((s) => s.refreshTotalStats);
+  const inherentSlots = useHeroStore((s) => s.inherentSlots);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -417,7 +418,7 @@ export function TotalStatsTab() {
     return () => {
       if (debounceRef.current !== null) clearTimeout(debounceRef.current);
     };
-  }, [levelToPower, refreshTotalStats]);
+  }, [levelToPower, inherentSlots, refreshTotalStats]);
 
   if (!archetype) {
     return (

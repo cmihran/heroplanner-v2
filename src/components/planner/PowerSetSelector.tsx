@@ -34,7 +34,7 @@ export function PowerSetSelector({ label, choices, powers, slot, selectedValue }
             if (ps) selectPowerset(slot, ps);
           }}
         >
-          <SelectTrigger className="mb-1 relative z-20 bg-coh-dark/80 border-coh-secondary/60 hover:border-coh-gradient1/60 hover:shadow-[0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200">
+          <SelectTrigger className="mb-1 relative z-20 pr-3 bg-coh-dark/80 border-coh-secondary/60 hover:border-coh-gradient1/60 hover:shadow-[0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200">
             <SelectValue placeholder={`Select ${label}`} />
           </SelectTrigger>
           <SelectContent>

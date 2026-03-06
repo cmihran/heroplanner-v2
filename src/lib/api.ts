@@ -3,13 +3,13 @@ import type {
   Archetype,
   BoostSetDetail,
   BoostSetSummary,
-  CalculatedEffect,
   EnhancementStrength,
   HeroBuildFile,
   InherentPowersResult,
   LoadBuildResult,
   NamedTableValues,
   PowerDetail,
+  PowerEffectsResult,
   PowerSlottedEnhancements,
   PowerSummary,
   PowersetCategory,
@@ -56,8 +56,8 @@ export const api = {
   getBoostSetDetail: (setName: string) =>
     isTauri ? invoke<BoostSetDetail>('get_boost_set_detail', { setName }) : Promise.resolve({} as BoostSetDetail),
 
-  calculatePowerEffects: (archetypeId: number, powerFullName: string, level: number, enhancements: SlottedEnhancement[] = []) =>
-    isTauri ? invoke<CalculatedEffect[]>('calculate_power_effects', { archetypeId, powerFullName, level, enhancements }) : Promise.resolve([]),
+  calculatePowerEffects: (archetypeId: number, powerFullName: string, level: number, enhancements: SlottedEnhancement[] = []): Promise<PowerEffectsResult> =>
+    isTauri ? invoke('calculate_power_effects', { archetypeId, powerFullName, level, enhancements }) : Promise.resolve({ effects: [], enhancedRecharge: null, enhancedEndurance: null }),
 
   getEnhancementValues: (archetypeId: number, boostKey: string, level: number, isAttuned: boolean) =>
     isTauri ? invoke<EnhancementStrength[]>('get_enhancement_values', { archetypeId, boostKey, level, isAttuned }) : Promise.resolve([]),

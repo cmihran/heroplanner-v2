@@ -96,13 +96,21 @@ export interface CalculatedEffect {
   duration: string | null;
 }
 
+export interface PowerEffectsResult {
+  effects: CalculatedEffect[];
+  enhancedRecharge: number | null;
+  enhancedEndurance: number | null;
+}
+
 export interface SlottedBoost {
   boostKey: string;
   icon: string | null;
   computedName: string | null;
   setName: string | null;
+  setGroupName: string | null;
   level: number | null;
   isAttuned: boolean;
+  boostLevel: number;
 }
 
 export interface BoostSetSummary {
@@ -165,6 +173,7 @@ export interface SlottedEnhancement {
   boostKey: string;
   level: number | null;
   isAttuned: boolean;
+  boostLevel: number;
 }
 
 export interface PowerSlottedEnhancements {
@@ -200,8 +209,10 @@ export interface SavedPower {
 export interface SavedBoost {
   boostKey: string;
   setName: string | null;
+  setGroupName: string | null;
   level: number | null;
   isAttuned: boolean;
+  boostLevel: number;
 }
 
 export interface ResolvedBoost {

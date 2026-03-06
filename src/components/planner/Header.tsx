@@ -118,7 +118,7 @@ export function Header() {
               const ok = await confirm('Unsaved Changes', 'You have unsaved changes. Close without saving?', 'Close');
               if (!ok) return;
             }
-            appWindow.close();
+            appWindow.destroy();
           }}
           title="Close"
         >

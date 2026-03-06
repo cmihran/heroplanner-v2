@@ -3,6 +3,7 @@ import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/h
 import { useHeroStore } from '@/stores/heroStore';
 import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
+import { condenseAttribs } from '@/lib/utils';
 import type { SlottedBoost, BoostSetDetail, EnhancementStrength } from '@/types/models';
 
 interface EnhancementHoverCardProps {
@@ -43,7 +44,18 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
   );
 
   const strengthsLabel = strengths?.length
-    ? strengths.map((s) => `${s.displayAttrib}: ${s.displayStrength}`).join(', ')
+    ? (() => {
+        // Group attribs by their strength value
+        const byStrength = new Map<string, string[]>();
+        for (const s of strengths) {
+          const arr = byStrength.get(s.displayStrength) || [];
+          arr.push(s.displayAttrib);
+          byStrength.set(s.displayStrength, arr);
+        }
+        return [...byStrength.entries()]
+          .map(([strength, attrs]) => `${condenseAttribs(attrs)}: ${strength}`)
+          .join(', ');
+      })()
     : null;
 
   // For plain IOs (no set), just show a simple tooltip-like card

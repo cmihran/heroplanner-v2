@@ -65,8 +65,10 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
       icon,
       computedName: boostName,
       setName: null,
+      setGroupName: null,
       level: 50,
       isAttuned: false,
+      boostLevel: 0,
     });
     onSelect();
   };
@@ -76,18 +78,41 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     onSelect();
   };
 
+  // Fetch set detail for level clamping when a set enhancement is slotted
+  const fetchBoostSetDetail = useHeroStore((s) => s.fetchBoostSetDetail);
+  const [boostSetInfo, setBoostSetInfo] = useState<import('@/types/models').BoostSetDetail | null>(null);
+  useEffect(() => {
+    if (currentBoost?.setName) {
+      fetchBoostSetDetail(currentBoost.setName).then(setBoostSetInfo);
+    } else {
+      setBoostSetInfo(null);
+    }
+  }, [currentBoost?.setName, fetchBoostSetDetail]);
+
+  const isArchetypeSet = currentBoost?.setGroupName === 'Archetype';
+  const isVeryRare = currentBoost?.setGroupName === 'Very_Rare';
+
   const handleLevelChange = (newLevel: number) => {
     if (!currentBoost) return;
-    slotBoost(powerFullName, slotIndex, { ...currentBoost, level: newLevel, isAttuned: false });
+    // Clamp level to set's min/max range
+    let clamped = newLevel;
+    if (boostSetInfo) {
+      clamped = Math.max(boostSetInfo.min_level, Math.min(boostSetInfo.max_level, clamped));
+    }
+    slotBoost(powerFullName, slotIndex, { ...currentBoost, level: clamped, isAttuned: false, boostLevel: currentBoost.boostLevel });
   };
 
   const handleAttunedToggle = () => {
     if (!currentBoost) return;
+    // Archetype enhancements can't be un-attuned
+    if (isArchetypeSet) return;
     const nowAttuned = !currentBoost.isAttuned;
+    const defaultLevel = boostSetInfo?.max_level ?? 50;
     slotBoost(powerFullName, slotIndex, {
       ...currentBoost,
       isAttuned: nowAttuned,
-      level: nowAttuned ? null : 50,
+      level: nowAttuned ? null : defaultLevel,
+      boostLevel: nowAttuned ? 0 : currentBoost.boostLevel,
     });
   };
 
@@ -111,24 +136,59 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
             <label className="text-[0.625rem] text-muted-foreground">Lv</label>
             <input
               type="number"
-              min={1}
-              max={50}
+              min={boostSetInfo?.min_level ?? 1}
+              max={boostSetInfo?.max_level ?? 50}
               value={currentBoost.isAttuned ? '' : (currentBoost.level ?? 50)}
-              disabled={currentBoost.isAttuned}
+              disabled={currentBoost.isAttuned || isVeryRare}
               onChange={(e) => handleLevelChange(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
               className="w-12 h-6 text-xs text-center bg-coh-dark border border-border/40 rounded px-1 disabled:opacity-40"
             />
           </div>
-          <button
-            onClick={handleAttunedToggle}
-            className={`h-6 px-2 text-[0.625rem] rounded border transition-colors ${
-              currentBoost.isAttuned
-                ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                : 'bg-coh-dark border-border/40 text-muted-foreground hover:border-amber-500/40'
-            }`}
-          >
-            Attuned
-          </button>
+          {!isArchetypeSet && (
+            <button
+              onClick={handleAttunedToggle}
+              className={`h-6 px-2 text-[0.625rem] rounded border transition-colors ${
+                currentBoost.isAttuned
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                  : 'bg-coh-dark border-border/40 text-muted-foreground hover:border-amber-500/40'
+              }`}
+            >
+              Attuned
+            </button>
+          )}
+          {isArchetypeSet && (
+            <span className="h-6 px-2 text-[0.625rem] rounded border bg-amber-500/20 border-amber-500/50 text-amber-400 flex items-center">
+              Attuned
+            </span>
+          )}
+          {/* IO Boosters: only for non-attuned set enhancements */}
+          {currentBoost.setName && !currentBoost.isAttuned && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  const newLevel = Math.max(0, currentBoost.boostLevel - 1);
+                  slotBoost(powerFullName, slotIndex, { ...currentBoost, boostLevel: newLevel });
+                }}
+                disabled={currentBoost.boostLevel <= 0}
+                className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
+              >
+                −
+              </button>
+              <span className={`text-[0.625rem] min-w-[1.5rem] text-center ${currentBoost.boostLevel > 0 ? 'text-cyan-400 font-bold' : 'text-muted-foreground'}`}>
+                +{currentBoost.boostLevel}
+              </span>
+              <button
+                onClick={() => {
+                  const newLevel = Math.min(5, currentBoost.boostLevel + 1);
+                  slotBoost(powerFullName, slotIndex, { ...currentBoost, boostLevel: newLevel });
+                }}
+                disabled={currentBoost.boostLevel >= 5}
+                className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
+              >
+                +
+              </button>
+            </div>
+          )}
         </div>
       )}
       <Tabs defaultValue="io" className="px-3 pb-3">

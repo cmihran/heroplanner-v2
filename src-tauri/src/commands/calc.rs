@@ -6,8 +6,8 @@ use super::utils::{categorize_attrib, format_attrib, format_scale};
 use crate::db::DbState;
 use crate::models::{
     ActiveSetBonus, CalculatedEffect, CombinedStat, EnhancementStrength,
-    PowerSlottedEnhancements, SlottedEnhancement, SlottedSetInfo, StatCap, StatSource,
-    TotalStatsResult,
+    PowerEffectsResult, PowerSlottedEnhancements, SlottedEnhancement, SlottedSetInfo,
+    StatCap, StatSource, TotalStatsResult,
 };
 
 /// Enhancement Diversification (ED): 3-zone piecewise diminishing returns.
@@ -42,7 +42,8 @@ fn compute_enhancement_strengths(
         let enh_level = if enh.is_attuned {
             char_level
         } else {
-            enh.level.unwrap_or(50).saturating_sub(1).max(0) as usize
+            let base = enh.level.unwrap_or(50) + enh.boost_level;
+            base.min(50).saturating_sub(1).max(0) as usize
         };
 
         // Get enhancement effect templates (attribs, table, scale)
@@ -199,18 +200,18 @@ pub fn calculate_power_effects(
     power_full_name: &str,
     level: usize,
     enhancements: Vec<SlottedEnhancement>,
-) -> Result<Vec<CalculatedEffect>, String> {
+) -> Result<PowerEffectsResult, String> {
     let db = state.0.lock().map_err(|e| e.to_string())?;
 
     // Compute enhancement strengths per attrib
     let enh_strengths = compute_enhancement_strengths(&db, archetype_id, &enhancements, level);
 
-    // Get power id
-    let power_id: i64 = db
+    // Get power id and recharge/endurance info
+    let (power_id, base_recharge, base_endurance): (i64, f64, f64) = db
         .query_row(
-            "SELECT id FROM powers WHERE full_name = ?1",
+            "SELECT id, recharge_time, endurance_cost FROM powers WHERE full_name = ?1",
             [power_full_name],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .map_err(|e| e.to_string())?;
 
@@ -301,7 +302,34 @@ pub fn calculate_power_effects(
         }
     }
 
-    Ok(results)
+    // Compute enhanced recharge/endurance if enhancements affect them
+    let enhanced_recharge = if base_recharge > 0.0 {
+        let recharge_bonus = enh_strengths.get("RechargeTime").copied().unwrap_or(0.0);
+        if recharge_bonus > 0.0 {
+            Some(base_recharge / (1.0 + recharge_bonus))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let enhanced_endurance = if base_endurance > 0.0 {
+        let end_discount = enh_strengths.get("EnduranceDiscount").copied().unwrap_or(0.0);
+        if end_discount > 0.0 {
+            Some(base_endurance / (1.0 + end_discount))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    Ok(PowerEffectsResult {
+        effects: results,
+        enhanced_recharge,
+        enhanced_endurance,
+    })
 }
 
 #[tauri::command]

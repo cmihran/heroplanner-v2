@@ -82,71 +82,10 @@ heroplanner-v2/
 
 ## Prerequisites
 
-- Node 20+ (via nvm, `.nvmrc` pinned to 20)
+- Node 22+ (via nvm, `.nvmrc` pinned to 22)
 - Rust toolchain (`rustup` — installed at `~/.cargo/bin/`)
 - Linux system deps: `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev`
 - PATH must include `~/.cargo/bin` for Rust tools
-
-## Current State (what's done, what's remaining)
-
-### DONE — compiles clean
-- Full project scaffolding (Tauri v2 + React + Vite + Tailwind v4)
-- All npm dependencies installed (Zustand, Radix UI, shadcn/ui primitives, lucide-react, react-resizable-panels v4)
-- Rust backend: models, DB connection, 16 Tauri commands (archetypes, powersets, powers, boosts, calc, builds, settings, total stats, get_enhancement_values)
-- React frontend: Zustand store, API wrapper, all UI components (Header, HeroInfo, PowerSetSelector, PowerSlotCard, LeftPanel, RightPanel)
-- Enhancement picker UI: Popover with IO tab (plain enhancements) and Sets tab (BoostSetBrowser with category → set → boost drill-down)
-- HoverCards: PowerHoverCard (stats grid with TO icons + description on power hover), EnhancementHoverCard (set pieces + set bonuses with resolved values on enhancement hover)
-- `get_boost_set_detail` resolves bonus power names to formatted display text with actual values (e.g. "+15% Accuracy", "+1.88% Def (AoE)")
-- `SlottedBoost` tracks `setName` to link slotted enhancements back to their boost set
-- Save/Load/Save As hero builds: native OS file dialogs (`.hero` JSON files), stateless save format (names/keys only, reconstructed from DB on load)
-- Auto-load last build on startup (remembers last saved/loaded file path in localStorage)
-- Configurable save directory in Settings (folder browser via native dialog)
-- Header layout: app controls (Settings, Save, Save As, Load) on left; window controls (min, max, close) on right; title absolutely centered across full window width
-- UI zoom via root `font-size` scaling (not webview zoom) — keeps SVGs and text crisp at any scale
-- Toast notifications via `sonner` for save/load feedback
-- SQLite schema (15 tables including migration_meta)
-- Migration script reads directly from zip — no extraction step
-- Database populated: 15 archetypes, 203 categories, 26k powers, 228 boost sets, 661 plain IO boosts + 26 type aliases (~516MB)
-- TypeScript compiles clean: `npx tsc -b --noEmit`
-- Rust compiles clean: `cargo check` (pre-existing harmless warnings only)
-- Copied static assets (images + font)
-- Total Stats tab: aggregate stats from active powers + set bonuses, grouped by category (Defense, Resistance, Offense, Damage, Movement, Status Resistance, Recovery, Misc)
-- Set Bonuses tab: shows active set bonuses grouped by power, with set icon, piece count, bonus texts
-- Power activation toggles: green dot on powers with self-effects, toggle active/inactive, persisted in save files
-- Vital bars (HP + End): game-HUD-style bars with effective HP/End, regen/recovery rates, net endurance drain
-- Per-source stat attribution: click any stat to expand and see which powers/sets contribute
-- Defense/Resistance: colored percentage bars (purple/pink), collapsible categories, show all/hide 0% toggle
-- `calculate_total_stats` Rust command: computes effective HP/End, regen/recovery per second, end drain, all stat bonuses
-- Shared `utils.rs` module: `format_attrib`, `format_scale`, `categorize_attrib` extracted from boosts.rs
-- PowerSlotCard redesigned: pill/capsule shape with protruding power icon (in-game style), glossy gradient, enhancement slots overlap bottom edge, ghost add-button on hover
-- Plain IO enhancements now in DB: migration imports `powers/boosts/*.json` (generic + dual-aspect) with effect data for future scaling/ED calculations
-- Save/load fix: `resolve_boost_keys` skips missing keys (was failing entirely); frontend falls back to `IO_ICONS` for plain IO enhancements
-- Powerset icons in dropdown selectors (uses first power's icon from each powerset)
-- Villain theme: red/crimson CSS variable overrides via `[data-theme="villain"]`, toggle in Settings
-- Detail pane: resizable split in RightPanel showing power/enhancement details on hover, with lock and minimize
-- Inherent powers tab: AT inherent + core powers (Brawl/Sprint/Rest) + fitness powers with enhancement slotting, save/load support
-- Incarnates tab and Accolades tab (placeholder UI)
-- Enhancement % values: `get_enhancement_values` command shows enhancement strength in picker, hover cards, and detail pane
-- Plain IO enhancement value fix: `apply_combat_mod_substitution` replaces `*_ones` tables with `*_boosts_33` IO schedule when `CombatModMagnitude` + `Boost (12)` flags present
-- Power grid column-major ordering with responsive row counts via `grid-flow-col`
-- Powerset change confirmation dialog when powers are already selected from that set
-- Powerset deselect (clear) button with confirmation
-- Window close confirmation when build has unsaved changes (both X button and Alt+F4)
-- Settings: hover cards toggle (disable power/enhancement hover popups), shimmer toggle, theme selector
-- Icon upscaling pipeline: multi-model AI upscaler with batched GPU inference (spandrel/PyTorch), idempotent per-model output dirs, blind A/B comparison framework, seamless model switching
-
-### Data Migration Workflow
-Drop a new `raw_data_*.zip` in the project root and run:
-```bash
-python3 scripts/migrate-zip-to-sqlite.py          # auto-detects latest zip
-python3 scripts/migrate-zip-to-sqlite.py --zip <path>  # or specify explicitly
-```
-
-### FUTURE WORK (not yet built)
-- Incarnates tab (full incarnate system — currently placeholder)
-- Accolades tab (full accolade powers — currently placeholder)
-- Enhancement Diversification (diminishing returns calculation)
-- Simulation engine (the main reason for choosing Rust — not started yet)
 
 ## localStorage Keys
 - `heroplanner-zoom` — zoom factor (default 1.5), applied as root font-size (factor × 16px)
@@ -169,6 +108,7 @@ python3 scripts/migrate-zip-to-sqlite.py --zip <path>  # or specify explicitly
 
 Core flow: Archetype → Powerset Category → Powerset → Powers → Enhancement Slots → Stat Calculation.
 
+- Database: 15 archetypes, 203 categories, 26k powers, 228 boost sets, 661 plain IO boosts + 26 type aliases (~516MB)
 - 15 player archetypes, each with ~102 named scaling tables (50 values for levels 1-50)
 - 23 level slots (1,2,4,6,8,10,...30,32,35,38,41,44,47,49), max 67 total enhancement slots
 - Powers belong to powersets, powersets to categories, categories to archetypes
@@ -187,7 +127,7 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 | `get_powers_batch` | Vec<power_full_name> | `Vec<PowerDetail>` |
 | `list_boost_sets_for_category` | category_name | `Vec<BoostSetSummary>` |
 | `get_boost_set_detail` | set_name | `BoostSetDetail` |
-| `calculate_power_effects` | archetype_id, power_full_name, level | `Vec<CalculatedEffect>` |
+| `calculate_power_effects` | archetype_id, power_full_name, level, enhancements | `PowerEffectsResult` (effects + enhanced recharge/endurance) |
 | `calculate_total_stats` | archetype_id, level, active_power_names, slotted_sets | `TotalStatsResult` |
 | `save_build` | app, build_data, default_dir? | `Option<String>` (saved path) |
 | `load_build` | app, default_dir? | `Option<LoadBuildResult>` |
@@ -196,6 +136,8 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 | `get_enhancement_values` | archetype_id, boost_key, level, is_attuned | `Vec<EnhancementStrength>` |
 | `get_inherent_powers` | archetype_name | `InherentPowersResult` |
 | `load_powersets_for_category` | category_name | `Vec<PowersetWithPowers>` |
+| `save_build_to_path` | build_data, path | `Result<()>` |
+| `set_zoom` | window, factor | `Result<()>` |
 | `pick_directory` | app, default_dir? | `Option<String>` |
 
 ## Known Quirks
@@ -216,9 +158,9 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 - Plain IO enhancement values: templates use flat `*_ones` tables with tiny scale (e.g. 0.0833). The game engine applies IO schedule via `CombatModMagnitude` flag. `apply_combat_mod_substitution` in calc.rs detects `CombatModMagnitude` + `Boost (12)` flags and replaces `*_ones` → `*_boosts_33` with scale 1.0. Procs excluded (no `Boost` flag). Set IOs unaffected (already use `*_boosts_33`).
 - Powerset `icon` field in DB often points to `*_set.png` files that don't exist in our image assets. Always use first power's icon via SQL subquery instead of `COALESCE(p.icon, ...)`.
 - `HeroBuildFile.inherent_powers` uses `#[serde(default)]` for backward compatibility with save files that predate inherent slotting.
-
-## Project Status
-- **v2** (`/home/charl/dev/heroplanner-v2`): Tauri v2 + React + TypeScript + Tailwind v4 + shadcn/ui + Zustand + Rust/SQLite backend. Compiles clean (TS + Rust). Database populated with game data.
+- `SlottedBoost`/`SavedBoost` have `boostLevel` (0-5 IO booster level) and `setGroupName` (Archetype, Very_Rare, etc.) — both use `#[serde(default)]` on the Rust side for backward compat.
+- Archetype enhancements are always attuned (forced in `BoostSetBrowser`/`EnhancementPicker`). Very Rare (purple) sets are always attuned. Set enhancement levels are clamped to `[min_level, max_level]`.
+- IO boosters (+1 to +5): only on non-attuned set enhancements, effective level = `level + boost_level` (capped at 50) in `compute_enhancement_strengths`.
 
 ## User Preferences
 - Wants to vibe-code everything (AI writes all code, user doesn't write frontend)

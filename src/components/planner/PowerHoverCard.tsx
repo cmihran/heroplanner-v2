@@ -3,6 +3,7 @@ import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/h
 import { useHeroStore } from '@/stores/heroStore';
 import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
+import { condenseAttribs } from '@/lib/utils';
 import type { PowerDetail, CalculatedEffect } from '@/types/models';
 
 interface PowerHoverCardProps {
@@ -15,6 +16,8 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
   const [detail, setDetail] = useState<PowerDetail | null>(null);
   const [baseEffects, setBaseEffects] = useState<CalculatedEffect[] | null>(null);
   const [enhancedEffects, setEnhancedEffects] = useState<CalculatedEffect[] | null>(null);
+  const [enhancedRecharge, setEnhancedRecharge] = useState<number | null>(null);
+  const [enhancedEndurance, setEnhancedEndurance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const fetchPowerDetail = useHeroStore((s) => s.fetchPowerDetail);
 
@@ -37,15 +40,20 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
           const selected = level !== undefined ? state.levelToPower[level] : null;
           const hasEnhancements = selected && Object.keys(selected.boosts).length > 0;
 
-          api.calculatePowerEffects(atId, powerFullName, 49, []).then(setBaseEffects);
+          api.calculatePowerEffects(atId, powerFullName, 49, []).then((r) => setBaseEffects(r.effects));
 
           if (hasEnhancements) {
             const enhs = Object.values(selected.boosts).map((b) => ({
               boostKey: b.boostKey,
               level: b.level,
               isAttuned: b.isAttuned,
+              boostLevel: b.boostLevel,
             }));
-            api.calculatePowerEffects(atId, powerFullName, 49, enhs).then(setEnhancedEffects);
+            api.calculatePowerEffects(atId, powerFullName, 49, enhs).then((r) => {
+              setEnhancedEffects(r.effects);
+              setEnhancedRecharge(r.enhancedRecharge);
+              setEnhancedEndurance(r.enhancedEndurance);
+            });
           }
         });
       }
@@ -65,7 +73,7 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
             <div className="h-3 bg-muted rounded w-full" />
           </div>
         ) : (
-          <PowerHoverContent detail={detail} baseEffects={baseEffects} enhancedEffects={enhancedEffects} />
+          <PowerHoverContent detail={detail} baseEffects={baseEffects} enhancedEffects={enhancedEffects} enhancedRecharge={enhancedRecharge} enhancedEndurance={enhancedEndurance} />
         )}
       </HoverCardContent>
     </HoverCard>
@@ -89,18 +97,18 @@ const STAT_ICONS: Record<string, string> = {
   Damage: 'TO_Training_Damage.png',
 };
 
-function PowerHoverContent({ detail, baseEffects, enhancedEffects }: { detail: PowerDetail; baseEffects: CalculatedEffect[] | null; enhancedEffects: CalculatedEffect[] | null }) {
-  const stats: StatRow[] = [];
+function PowerHoverContent({ detail, baseEffects, enhancedEffects, enhancedRecharge, enhancedEndurance }: { detail: PowerDetail; baseEffects: CalculatedEffect[] | null; enhancedEffects: CalculatedEffect[] | null; enhancedRecharge: number | null; enhancedEndurance: number | null }) {
+  const stats: (StatRow & { enhanced?: string })[] = [];
 
   if (detail.boosts_allowed.includes('Enhance Accuracy') && detail.accuracy > 0) {
     stats.push({ icon: STAT_ICONS.Accuracy, label: 'Accuracy', value: `${detail.accuracy}x` });
   }
   if (detail.endurance_cost > 0) {
     const suffix = detail.power_type === 'Toggle' ? '/s' : '';
-    stats.push({ icon: STAT_ICONS.Endurance, label: 'Endurance', value: `${detail.endurance_cost.toFixed(2)}${suffix}` });
+    stats.push({ icon: STAT_ICONS.Endurance, label: 'Endurance', value: `${detail.endurance_cost.toFixed(2)}${suffix}`, enhanced: enhancedEndurance != null ? `${enhancedEndurance.toFixed(2)}${suffix}` : undefined });
   }
   if (detail.recharge_time > 0) {
-    stats.push({ icon: STAT_ICONS.Recharge, label: 'Recharge', value: `${detail.recharge_time.toFixed(2)}s` });
+    stats.push({ icon: STAT_ICONS.Recharge, label: 'Recharge', value: `${detail.recharge_time.toFixed(2)}s`, enhanced: enhancedRecharge != null ? `${enhancedRecharge.toFixed(2)}s` : undefined });
   }
   if (detail.activation_time > 0) {
     stats.push({ icon: STAT_ICONS['Cast Time'], label: 'Cast Time', value: `${detail.activation_time.toFixed(2)}s` });
@@ -130,11 +138,14 @@ function PowerHoverContent({ detail, baseEffects, enhancedEffects }: { detail: P
       {/* Stats grid */}
       {stats.length > 0 && (
         <div className="grid grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 text-xs mb-2 items-center">
-          {stats.map(({ icon, label, value }) => (
+          {stats.map(({ icon, label, value, enhanced }) => (
             <div key={label} className="contents">
               <img src={imageUrl(icon)} alt="" className="w-4 h-4" />
               <span className="text-muted-foreground">{label}</span>
-              <span className="text-right">{value}</span>
+              <span className="text-right">
+                {value}
+                {enhanced && <span className="text-emerald-400"> → {enhanced}</span>}
+              </span>
             </div>
           ))}
         </div>
@@ -148,7 +159,7 @@ function PowerHoverContent({ detail, baseEffects, enhancedEffects }: { detail: P
             {baseEffects.filter((e) => e.target === 'Self' || e.target === 'Affected').map((effect, i) => {
               const enhanced = enhancedEffects?.[i];
               const isEnhanced = enhanced && enhanced.display_value !== effect.display_value;
-              const label = effect.attribs.join(', ');
+              const label = condenseAttribs(effect.attribs);
               return (
                 <div key={i} className="text-[0.6875rem] flex items-center gap-1">
                   <span className="text-muted-foreground">{label}:</span>

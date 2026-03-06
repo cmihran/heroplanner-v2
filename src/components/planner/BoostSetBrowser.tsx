@@ -67,13 +67,20 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
   };
 
   const handleBoostClick = (boostKey: string, icon: string | null, computedName: string | null, attuned: boolean) => {
+    const groupName = selectedSet?.group_name ?? null;
+    const isArchetype = groupName === 'Archetype';
+    // Archetype and Very Rare (purple) sets are always attuned
+    const forceAttuned = isArchetype || groupName === 'Very_Rare' || attuned;
+    const level = forceAttuned ? null : (selectedSet?.max_level ?? 50);
     const boost = {
       boostKey,
       icon,
       computedName,
       setName: selectedSet?.name ?? null,
-      level: attuned ? null : (selectedSet?.max_level ?? 50),
-      isAttuned: attuned,
+      setGroupName: groupName,
+      level,
+      isAttuned: forceAttuned,
+      boostLevel: 0,
     };
     if (isInherent) {
       setInherentBoost(powerFullName, slotIndex, boost);

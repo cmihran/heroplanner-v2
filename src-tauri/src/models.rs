@@ -110,6 +110,14 @@ pub struct CalculatedEffect {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PowerEffectsResult {
+    pub effects: Vec<CalculatedEffect>,
+    pub enhanced_recharge: Option<f64>,
+    pub enhanced_endurance: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BoostSetSummary {
     pub name: String,
     pub display_name: String,
@@ -257,6 +265,8 @@ pub struct SlottedEnhancement {
     pub boost_key: String,
     pub level: Option<i32>,
     pub is_attuned: bool,
+    #[serde(default)]
+    pub boost_level: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -303,9 +313,13 @@ pub struct SavedBoost {
     pub boost_key: String,
     pub set_name: Option<String>,
     #[serde(default)]
+    pub set_group_name: Option<String>,
+    #[serde(default)]
     pub level: Option<i32>,
     #[serde(default)]
     pub is_attuned: bool,
+    #[serde(default)]
+    pub boost_level: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
