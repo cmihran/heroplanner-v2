@@ -55,8 +55,15 @@ heroplanner-v2/
   scripts/
     migrate-zip-to-sqlite.py   # Primary: reads raw_data_*.zip → inserts into SQLite
     migrate-json-to-sqlite.py  # Legacy: reads v1 filesystem JSON data → inserts into SQLite
+    upscale-icons.py           # AI upscale pipeline: multi-model, batched GPU, idempotent
+    upscale-blind-test.py      # Blind A/B comparison framework for upscaler models
+  tools/                       # External binaries + model weights (.gitignored)
+    models/                    # Spandrel .pth model files (ESRGAN, DAT, etc.)
+    realesrgan/                # realesrgan-ncnn-vulkan binary + bundled models
+    waifu2x/                   # waifu2x-ncnn-vulkan binary + models
   public/
-    images/                    # Game images
+    images/                    # Game images (originals; upscaled versions activated via script)
+    images_upscaled/           # Per-model upscaled output + originals backup (.gitignored)
     fonts/                     # Custom font
 ```
 
@@ -71,6 +78,7 @@ heroplanner-v2/
 - **Type check:** `npx tsc -b --noEmit`
 - **Rust check:** `cd src-tauri && cargo check`
 - **Data migration:** `python3 scripts/migrate-zip-to-sqlite.py` (auto-detects latest `raw_data_*.zip`)
+- **Upscale icons:** `make upscale-list` (show models/progress), `make upscale-dat` or `make upscale-tta` (run upscale), `make upscale-activate MODEL=<name>` (switch icon set), `make upscale-restore` (restore originals)
 
 ## Prerequisites
 
@@ -125,6 +133,7 @@ heroplanner-v2/
 - Powerset deselect (clear) button with confirmation
 - Window close confirmation when build has unsaved changes (both X button and Alt+F4)
 - Settings: hover cards toggle (disable power/enhancement hover popups), shimmer toggle, theme selector
+- Icon upscaling pipeline: multi-model AI upscaler with batched GPU inference (spandrel/PyTorch), idempotent per-model output dirs, blind A/B comparison framework, seamless model switching
 
 ### Data Migration Workflow
 Drop a new `raw_data_*.zip` in the project root and run:

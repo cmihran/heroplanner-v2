@@ -1,4 +1,5 @@
-.PHONY: dev frontend build lint typecheck rustcheck migrate clean install
+.PHONY: dev frontend build lint typecheck rustcheck migrate clean install \
+       upscale upscale-dat upscale-tta upscale-list upscale-activate upscale-restore
 
 # Development
 dev:                  ## Start Tauri dev (Rust + Vite with hot reload)
@@ -29,6 +30,25 @@ sync:                 ## Sync project to Windows (C:\dev\heroplanner-v2)
 # Data
 migrate:              ## Run zip-to-SQLite migration (auto-detects latest zip)
 	python3 scripts/migrate-zip-to-sqlite.py
+
+# Upscaling
+upscale-list:         ## Show upscale models and progress
+	python3 scripts/upscale-icons.py --list
+
+upscale-dat:          ## Upscale all icons with 4xNomos8kDAT (GPU)
+	python3 scripts/upscale-icons.py --all --model 4xNomos8kDAT
+
+upscale-tta:          ## Upscale all icons with realesrgan-x4plus-anime-TTA
+	python3 scripts/upscale-icons.py --all --model realesrgan-x4plus-anime-TTA
+
+upscale:              ## Upscale with a model: make upscale MODEL=4xNomos8kDAT
+	python3 scripts/upscale-icons.py --all --model $(MODEL)
+
+upscale-activate:     ## Activate a model: make upscale-activate MODEL=4xNomos8kDAT
+	python3 scripts/upscale-icons.py --activate $(MODEL)
+
+upscale-restore:      ## Restore original icons
+	python3 scripts/upscale-icons.py --activate originals
 
 # Setup
 install:              ## Install npm dependencies

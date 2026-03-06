@@ -12,3 +12,13 @@ when i slot recharge anbd endurance cost reduction on a power i dont see the rec
 remove markdown files from the watcher for make dev
 
 the dropdown arrow on the far right of powersets selection is covered by the middle pane separator
+
+
+clicking close on the dont save popup after clicking the x button doesnt close the window
+
+
+the red bar under endurance drain should show how red the current net end gain is. it doesnt seem to reflect when i turn powers on and off
+
+
+
+audit and condense claude.md and memory.md
