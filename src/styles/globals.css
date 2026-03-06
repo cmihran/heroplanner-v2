@@ -64,3 +64,16 @@ input[type="checkbox"],
 input[type="radio"] {
   cursor: pointer;
 }
+
+@keyframes vital-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.vital-shimmer {
+  animation: vital-shimmer 3.5s ease-in-out infinite;
+}

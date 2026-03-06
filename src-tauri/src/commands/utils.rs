@@ -154,7 +154,7 @@ pub fn categorize_attrib(attrib: &str, aspect: &str) -> (&'static str, &'static 
         ("Translucency", _) => ("Misc", "Translucency"),
         ("Taunt", _) => ("Misc", "Taunt"),
         ("Placate", _) => ("Misc", "Placate"),
-        ("Teleport", _) => ("Misc", "Teleport"),
+        ("Teleport", _) => ("Movement", "Teleport"),
         ("Repel", _) => ("Misc", "Repel"),
         ("Global_Chance_Mod", _) => ("Misc", "Global Chance"),
 

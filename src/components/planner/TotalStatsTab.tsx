@@ -7,6 +7,37 @@ import type { CombinedStat, StatCap, StatSource, TotalStatsResult } from '@/type
 const CATEGORY_ORDER = ['Offense', 'Defense', 'Resistance', 'Movement', 'Status Resistance', 'Recovery', 'Misc'];
 const VITAL_LABELS = new Set(['Max HP', 'Regeneration', 'Max End', 'Recovery', 'End Reduction']);
 
+const SHIMMER_KEY = 'heroplanner-shimmer';
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Defense': '\u{1F6E1}',       // shield
+  'Resistance': '\u{1F9F1}',    // brick/wall
+  'Offense': '\u{1F3AF}',       // target/crosshairs
+  'Damage': '\u{2694}',         // crossed swords
+  'Movement': '\u{1F3C3}',      // running figure
+  'Status Resistance': '\u26D3', // chains
+  'Recovery': '\u2764',          // heart
+  'Misc': '\u2699',              // gear
+};
+
+const DAMAGE_TYPE_ICONS: Record<string, string> = {
+  'Smashing': '\u{1F44A}',       // fist
+  'Lethal': '\u{1F5E1}',         // dagger
+  'Fire': '\u{1F525}',           // flame
+  'Cold': '\u2744',              // snowflake
+  'Energy': '\u26A1',            // lightning
+  'Negative Energy': '\u{1F480}', // skull
+  'Psionic': '\u{1F9E0}',        // brain
+  'Toxic': '\u2623',             // biohazard
+  'Melee': '\u2694',             // crossed swords
+  'Ranged': '\u{1F3F9}',         // bow and arrow
+  'AoE': '\u{1F4A5}',            // explosion
+};
+
+const DEFENSE_BAR_COLOR = 'rgba(168,85,247,0.25)';
+const DEFENSE_SOFT_CAP = 0.45; // 45%
+const SOFT_CAP_BAR_PCT = 75;   // 45% maps to 75% of bar width
+
 function groupByCategory(stats: CombinedStat[]): Record<string, CombinedStat[]> {
   const groups: Record<string, CombinedStat[]> = {};
   for (const stat of stats) {
@@ -30,13 +61,32 @@ function groupByCategory(stats: CombinedStat[]): Record<string, CombinedStat[]> 
   return groups;
 }
 
-function StatRow({ stat, barColor, cap }: { stat: CombinedStat; barColor?: string; cap?: StatCap }) {
+function StatRow({ stat, barColor, cap, showDamageTypeIcon }: { stat: CombinedStat; barColor?: string; cap?: StatCap; showDamageTypeIcon?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const hasSources = stat.sources.length > 0;
-  // For bar: scale so the cap = 100% of bar width (or 100% if no cap)
-  const barMax = cap ? cap.capValue : 1;
-  const barPct = barColor ? Math.min((Math.abs(stat.totalValue) / barMax) * 100, 100) : 0;
+  const isDefense = barColor === DEFENSE_BAR_COLOR;
+
+  // For defense bars: scale so 45% = 75% bar width
+  // For other bars: scale so cap = 100% bar width
+  let barPct = 0;
+  let overCapPct = 0;
+  if (barColor) {
+    if (isDefense) {
+      const scaleFactor = SOFT_CAP_BAR_PCT / (DEFENSE_SOFT_CAP * 100);
+      const rawPct = Math.abs(stat.totalValue) * 100 * scaleFactor;
+      if (stat.totalValue > DEFENSE_SOFT_CAP) {
+        barPct = SOFT_CAP_BAR_PCT;
+        overCapPct = Math.min(rawPct - SOFT_CAP_BAR_PCT, 100 - SOFT_CAP_BAR_PCT);
+      } else {
+        barPct = Math.min(rawPct, 100);
+      }
+    } else {
+      const barMax = cap ? cap.capValue : 1;
+      barPct = Math.min((Math.abs(stat.totalValue) / barMax) * 100, 100);
+    }
+  }
   const atCap = cap && stat.totalValue >= cap.capValue - 0.001;
+  const dmgIcon = showDamageTypeIcon ? DAMAGE_TYPE_ICONS[stat.label] : undefined;
 
   const Row = hasSources ? 'button' : 'div';
 
@@ -46,10 +96,25 @@ function StatRow({ stat, barColor, cap }: { stat: CombinedStat; barColor?: strin
         onClick={hasSources ? () => setExpanded(!expanded) : undefined}
         className={`relative w-full flex items-center justify-between text-[0.8125rem] py-1 px-1 rounded overflow-hidden ${hasSources ? 'hover:bg-white/5 cursor-pointer' : ''}`}
       >
+        {/* Normal bar fill */}
         {barColor && barPct > 0 && (
           <div
-            className="absolute inset-y-0 left-0 rounded pointer-events-none"
+            className="absolute inset-y-0 left-0 rounded pointer-events-none transition-[width] duration-500 ease-out"
             style={{ width: `${barPct}%`, backgroundColor: barColor }}
+          />
+        )}
+        {/* Over-cap fill (lighter shade, only for defense) */}
+        {isDefense && overCapPct > 0 && (
+          <div
+            className="absolute inset-y-0 rounded pointer-events-none transition-[width] duration-500 ease-out"
+            style={{ left: `${SOFT_CAP_BAR_PCT}%`, width: `${overCapPct}%`, backgroundColor: 'rgba(168,85,247,0.12)' }}
+          />
+        )}
+        {/* Soft cap marker line (defense only) */}
+        {isDefense && (
+          <div
+            className="absolute inset-y-0 pointer-events-none"
+            style={{ left: `${SOFT_CAP_BAR_PCT}%`, width: '0.0625rem', backgroundColor: 'rgba(168,85,247,0.5)' }}
           />
         )}
         <span className="relative flex items-center gap-1.5 text-slate-300">
@@ -57,6 +122,7 @@ function StatRow({ stat, barColor, cap }: { stat: CombinedStat; barColor?: strin
             <ChevronRight className={`h-3 w-3 text-slate-500 transition-transform ${expanded ? 'rotate-90' : ''}`} />
           )}
           {!hasSources && <span className="w-3" />}
+          {dmgIcon && <span className="text-[0.6875rem] opacity-60">{dmgIcon}</span>}
           {stat.label}
         </span>
         <span className="relative font-mono text-slate-100">
@@ -102,6 +168,10 @@ function SourceGroup({ label, sources, color }: { label: string; sources: StatSo
 function VitalBars({ result }: { result: TotalStatsResult }) {
   const [hpExpanded, setHpExpanded] = useState(false);
   const [endExpanded, setEndExpanded] = useState(false);
+  const [shimmerEnabled] = useState(() => {
+    const stored = localStorage.getItem(SHIMMER_KEY);
+    return stored === null ? true : stored === 'true';
+  });
 
   const { effectiveHp, hpPerSec, baseHp, effectiveEnd, endPerSec, baseEnd, endDrain, combinedStats } = result;
   const netEnd = endPerSec - endDrain;
@@ -140,8 +210,11 @@ function VitalBars({ result }: { result: TotalStatsResult }) {
               </div>
             </div>
 
-            <div className="h-1 bg-emerald-950/60">
-              <div className="h-full bg-gradient-to-r from-emerald-500/50 via-emerald-400/30 to-emerald-600/20 rounded-r-full" />
+            <div className="relative h-1 bg-emerald-950/60 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-emerald-500/50 via-emerald-400/30 to-emerald-600/20 rounded-r-full transition-[width] duration-700 ease-out" />
+              {shimmerEnabled && (
+                <div className="vital-shimmer absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-emerald-300/20 to-transparent pointer-events-none" />
+              )}
             </div>
           </div>
 
@@ -196,7 +269,10 @@ function VitalBars({ result }: { result: TotalStatsResult }) {
             </div>
 
             <div className="relative h-1 bg-blue-950/60 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-500/50 via-blue-400/30 to-blue-600/20 rounded-r-full" />
+              <div className="h-full bg-gradient-to-r from-blue-500/50 via-blue-400/30 to-blue-600/20 rounded-r-full transition-[width] duration-700 ease-out" />
+              {shimmerEnabled && (
+                <div className="vital-shimmer absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-blue-300/20 to-transparent pointer-events-none" />
+              )}
               {endDrain > 0 && (
                 <div
                   className="absolute inset-y-0 right-0 bg-gradient-to-l from-red-500/50 to-transparent rounded-l-full"
@@ -282,9 +358,11 @@ function DamageSubGroup({ entries }: { entries: CombinedStat[] }) {
 function CategorySection({ category, entries, damageEntries, capMap }: { category: string; entries: CombinedStat[]; damageEntries?: CombinedStat[]; capMap?: Map<string, StatCap> }) {
   const [collapsed, setCollapsed] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const barColor = category === 'Defense' ? 'rgba(168,85,247,0.25)' : category === 'Resistance' ? 'rgba(236,72,153,0.25)' : undefined;
+  const barColor = category === 'Defense' ? DEFENSE_BAR_COLOR : category === 'Resistance' ? 'rgba(236,72,153,0.25)' : undefined;
   const hasZeros = (category === 'Defense' || category === 'Resistance') && entries.some((s) => s.totalValue === 0);
   const visible = hasZeros && !showAll ? entries.filter((s) => s.totalValue !== 0 || s.sources.length > 0) : entries;
+  const showDmgIcons = category === 'Defense' || category === 'Resistance';
+  const catIcon = CATEGORY_ICONS[category];
 
   return (
     <div className="rounded-lg overflow-hidden">
@@ -294,6 +372,7 @@ function CategorySection({ category, entries, damageEntries, capMap }: { categor
           className="flex-1 px-3 py-1.5 flex items-center gap-1.5 hover:bg-white/[0.06] transition-colors cursor-pointer"
         >
           <ChevronRight className={`h-3 w-3 text-slate-500 transition-transform ${collapsed ? '' : 'rotate-90'}`} />
+          {catIcon && <span className="text-[0.6875rem] opacity-50">{catIcon}</span>}
           <h3 className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-wider">
             {category}
           </h3>
@@ -310,7 +389,7 @@ function CategorySection({ category, entries, damageEntries, capMap }: { categor
       {!collapsed && (
         <div className="px-2 py-1">
           {visible.map((stat) => (
-            <StatRow key={stat.label} stat={stat} barColor={barColor} cap={capMap?.get(`${category}|${stat.label}`)} />
+            <StatRow key={stat.label} stat={stat} barColor={barColor} cap={capMap?.get(`${category}|${stat.label}`)} showDamageTypeIcon={showDmgIcons} />
           ))}
           {damageEntries && damageEntries.length > 0 && (
             <DamageSubGroup entries={damageEntries} />

@@ -9,6 +9,7 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3.0;
 const ZOOM_KEY = 'heroplanner-zoom';
 const SAVE_DIR_KEY = 'heroplanner-save-dir';
+const SHIMMER_KEY = 'heroplanner-shimmer';
 const DEFAULT_ZOOM = 1.5;
 
 function getStoredZoom(): number {
@@ -22,6 +23,10 @@ function applyRootFontSize(factor: number) {
 
 export function Settings() {
   const [zoom, setZoom] = useState(getStoredZoom);
+  const [shimmer, setShimmer] = useState(() => {
+    const stored = localStorage.getItem(SHIMMER_KEY);
+    return stored === null ? true : stored === 'true';
+  });
   const [saveDir, setSaveDir] = useState(() => localStorage.getItem(SAVE_DIR_KEY) ?? '');
 
   useEffect(() => {
@@ -43,6 +48,12 @@ export function Settings() {
       setSaveDir(dir);
       localStorage.setItem(SAVE_DIR_KEY, dir);
     }
+  };
+
+  const toggleShimmer = () => {
+    const next = !shimmer;
+    setShimmer(next);
+    localStorage.setItem(SHIMMER_KEY, String(next));
   };
 
   const resetSaveDir = () => {
@@ -93,6 +104,20 @@ export function Settings() {
                 Reset
               </Button>
             </div>
+          </div>
+          <div className="space-y-2 bg-white/5 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-white/80">Vital Bar Animation</label>
+              <button
+                onClick={toggleShimmer}
+                className={`relative w-8 h-[1.125rem] rounded-full transition-colors cursor-pointer ${shimmer ? 'bg-emerald-600' : 'bg-white/20'}`}
+              >
+                <span
+                  className={`absolute top-[0.125rem] left-[0.125rem] w-[0.875rem] h-[0.875rem] bg-white rounded-full transition-transform ${shimmer ? 'translate-x-[0.625rem]' : ''}`}
+                />
+              </button>
+            </div>
+            <p className="text-[0.625rem] text-white/40">Subtle shimmer effect on HP and Endurance bars</p>
           </div>
           <div className="space-y-2 bg-white/5 rounded-lg p-3">
             <label className="text-xs font-medium text-white/80">Save Location</label>
