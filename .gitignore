@@ -37,3 +37,7 @@ raw_data_*.zip
 
 # Hero build files
 *.hero
+
+# AI upscale tools and output
+tools/
+public/images_upscaled/

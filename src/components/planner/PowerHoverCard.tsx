@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { useHeroStore } from '@/stores/heroStore';
+import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
-import type { PowerDetail } from '@/types/models';
+import type { PowerDetail, CalculatedEffect } from '@/types/models';
 
 interface PowerHoverCardProps {
   powerFullName: string;
@@ -12,8 +13,13 @@ interface PowerHoverCardProps {
 
 export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCardProps) {
   const [detail, setDetail] = useState<PowerDetail | null>(null);
+  const [baseEffects, setBaseEffects] = useState<CalculatedEffect[] | null>(null);
+  const [enhancedEffects, setEnhancedEffects] = useState<CalculatedEffect[] | null>(null);
   const [loading, setLoading] = useState(false);
   const fetchPowerDetail = useHeroStore((s) => s.fetchPowerDetail);
+
+  const disabled = localStorage.getItem('heroplanner-hover') === 'false';
+  if (disabled) return <>{children}</>;
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
@@ -22,6 +28,25 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
         fetchPowerDetail(powerFullName).then((d) => {
           setDetail(d);
           setLoading(false);
+
+          // Fetch base and enhanced effects
+          const state = useHeroStore.getState();
+          if (!state.archetype) return;
+          const atId = state.archetype.id;
+          const level = state.powerNameToLevel[powerFullName];
+          const selected = level !== undefined ? state.levelToPower[level] : null;
+          const hasEnhancements = selected && Object.keys(selected.boosts).length > 0;
+
+          api.calculatePowerEffects(atId, powerFullName, 49, []).then(setBaseEffects);
+
+          if (hasEnhancements) {
+            const enhs = Object.values(selected.boosts).map((b) => ({
+              boostKey: b.boostKey,
+              level: b.level,
+              isAttuned: b.isAttuned,
+            }));
+            api.calculatePowerEffects(atId, powerFullName, 49, enhs).then(setEnhancedEffects);
+          }
         });
       }
     },
@@ -40,7 +65,7 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
             <div className="h-3 bg-muted rounded w-full" />
           </div>
         ) : (
-          <PowerHoverContent detail={detail} />
+          <PowerHoverContent detail={detail} baseEffects={baseEffects} enhancedEffects={enhancedEffects} />
         )}
       </HoverCardContent>
     </HoverCard>
@@ -64,7 +89,7 @@ const STAT_ICONS: Record<string, string> = {
   Damage: 'TO_Training_Damage.png',
 };
 
-function PowerHoverContent({ detail }: { detail: PowerDetail }) {
+function PowerHoverContent({ detail, baseEffects, enhancedEffects }: { detail: PowerDetail; baseEffects: CalculatedEffect[] | null; enhancedEffects: CalculatedEffect[] | null }) {
   const stats: StatRow[] = [];
 
   if (detail.boosts_allowed.includes('Enhance Accuracy') && detail.accuracy > 0) {
@@ -113,6 +138,29 @@ function PowerHoverContent({ detail }: { detail: PowerDetail }) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Calculated effects */}
+      {baseEffects && baseEffects.length > 0 && (
+        <>
+          <div className="border-t border-border my-2" />
+          <div className="space-y-0.5">
+            {baseEffects.filter((e) => e.target === 'Self' || e.target === 'Affected').map((effect, i) => {
+              const enhanced = enhancedEffects?.[i];
+              const isEnhanced = enhanced && enhanced.display_value !== effect.display_value;
+              const label = effect.attribs.join(', ');
+              return (
+                <div key={i} className="text-[0.6875rem] flex items-center gap-1">
+                  <span className="text-muted-foreground">{label}:</span>
+                  <span>{effect.display_value}</span>
+                  {isEnhanced && (
+                    <span className="text-emerald-400">→ {enhanced.display_value}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Description */}

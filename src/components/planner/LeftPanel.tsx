@@ -10,6 +10,12 @@ export function LeftPanel() {
   const primarySetChoices = useHeroStore((s) => s.primarySetChoices);
   const secondarySetChoices = useHeroStore((s) => s.secondarySetChoices);
   const powerPoolChoices = useHeroStore((s) => s.powerPoolChoices);
+  const selectedPrimary = useHeroStore((s) => s.selectedPrimary);
+  const selectedSecondary = useHeroStore((s) => s.selectedSecondary);
+  const selectedPool1 = useHeroStore((s) => s.selectedPool1);
+  const selectedPool2 = useHeroStore((s) => s.selectedPool2);
+  const selectedPool3 = useHeroStore((s) => s.selectedPool3);
+  const selectedPool4 = useHeroStore((s) => s.selectedPool4);
   const primaryPowers = useHeroStore((s) => s.primaryPowers);
   const secondaryPowers = useHeroStore((s) => s.secondaryPowers);
   const pool1Powers = useHeroStore((s) => s.pool1Powers);
@@ -55,12 +61,14 @@ export function LeftPanel() {
                 choices={primarySetChoices}
                 powers={primaryPowers}
                 slot="primary"
+                selectedValue={selectedPrimary}
               />
               <PowerSetSelector
                 label="Secondary Power Set"
                 choices={secondarySetChoices}
                 powers={secondaryPowers}
                 slot="secondary"
+                selectedValue={selectedSecondary}
               />
               {/* Divider between main sets and pools */}
               <div className="py-1">
@@ -71,24 +79,28 @@ export function LeftPanel() {
                 choices={powerPoolChoices}
                 powers={pool1Powers}
                 slot="pool1"
+                selectedValue={selectedPool1}
               />
               <PowerSetSelector
                 label="Power Pool 2"
                 choices={powerPoolChoices}
                 powers={pool2Powers}
                 slot="pool2"
+                selectedValue={selectedPool2}
               />
               <PowerSetSelector
                 label="Power Pool 3"
                 choices={powerPoolChoices}
                 powers={pool3Powers}
                 slot="pool3"
+                selectedValue={selectedPool3}
               />
               <PowerSetSelector
                 label="Power Pool 4"
                 choices={powerPoolChoices}
                 powers={pool4Powers}
                 slot="pool4"
+                selectedValue={selectedPool4}
               />
             </div>
           </ScrollArea>

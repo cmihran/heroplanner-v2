@@ -11,7 +11,10 @@ pub fn list_powerset_choices(
     let db = state.0.lock().map_err(|e| e.to_string())?;
     let mut stmt = db
         .prepare(
-            "SELECT p.name, p.display_name
+            "SELECT p.name, p.display_name,
+                    (SELECT pw.icon FROM powers pw
+                        JOIN powerset_powers pp ON pp.power_name = pw.full_name
+                        WHERE pp.powerset_id = p.id ORDER BY pp.sort_order LIMIT 1)
              FROM powersets p
              JOIN powerset_categories pc ON p.category_id = pc.id
              WHERE pc.name = ?1 COLLATE NOCASE
@@ -24,6 +27,7 @@ pub fn list_powerset_choices(
             Ok(PowersetCategory {
                 powerset_name: row.get(0)?,
                 display_name: row.get(1)?,
+                icon: row.get(2)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -51,9 +55,13 @@ pub fn load_powersets_for_category(
     let db = state.0.lock().map_err(|e| e.to_string())?;
 
     // Get all powersets in this category
+    // Use the first power's icon as powerset icon (set icons like *_set.png are not in our image assets)
     let mut ps_stmt = db
         .prepare(
-            "SELECT p.name, p.display_name
+            "SELECT p.name, p.display_name,
+                    (SELECT pw.icon FROM powers pw
+                        JOIN powerset_powers pp ON pp.power_name = pw.full_name
+                        WHERE pp.powerset_id = p.id ORDER BY pp.sort_order LIMIT 1)
              FROM powersets p
              JOIN powerset_categories pc ON p.category_id = pc.id
              WHERE pc.name = ?1 COLLATE NOCASE
@@ -61,18 +69,19 @@ pub fn load_powersets_for_category(
         )
         .map_err(|e| e.to_string())?;
 
-    let powersets: Vec<(String, String)> = ps_stmt
-        .query_map([category_name], |row| Ok((row.get(0)?, row.get(1)?)))
+    let powersets: Vec<(String, String, Option<String>)> = ps_stmt
+        .query_map([category_name], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
 
     let mut result = Vec::with_capacity(powersets.len());
-    for (name, display_name) in powersets {
+    for (name, display_name, icon) in powersets {
         let powers = load_powerset_inner(&db, &name)?;
         result.push(PowersetWithPowers {
             powerset_name: name,
             display_name,
+            icon,
             powers,
         });
     }
@@ -127,13 +136,36 @@ pub fn get_inherent_powers(
     let fetch_power = |full_name: &str| -> Result<Option<InherentPowerInfo>, String> {
         let mut stmt = db
             .prepare(
-                "SELECT full_name, display_name, display_help, display_short_help, icon, power_type
+                "SELECT full_name, display_name, display_help, display_short_help, icon, power_type, max_boosts,
+                        CASE
+                            WHEN power_type IN ('Toggle', 'Auto') THEN 1
+                            ELSE EXISTS(
+                                SELECT 1 FROM power_effects pe
+                                JOIN effect_templates et ON et.effect_id = pe.id
+                                WHERE pe.power_id = powers.id AND et.target = 'Self'
+                            )
+                        END as has_self_effects
                  FROM powers WHERE full_name = ?1",
             )
             .map_err(|e| e.to_string())?;
 
         let result = stmt
             .query_row([full_name], |row| {
+                let pid: i64 = db
+                    .query_row("SELECT id FROM powers WHERE full_name = ?1", [full_name], |r| r.get(0))
+                    .unwrap_or(0);
+                // Get boosts_allowed for slotting
+                let boosts_allowed: Vec<String> = db
+                    .prepare("SELECT boost_name FROM power_boosts_allowed WHERE power_id = ?1")
+                    .ok()
+                    .map(|mut s| {
+                        s.query_map([pid], |r| r.get::<_, String>(0))
+                            .ok()
+                            .map(|rows| rows.filter_map(|r| r.ok()).collect())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default();
+
                 Ok(InherentPowerInfo {
                     full_name: row.get(0)?,
                     display_name: row.get(1)?,
@@ -141,6 +173,9 @@ pub fn get_inherent_powers(
                     display_short_help: row.get(3)?,
                     icon: row.get(4)?,
                     power_type: row.get(5)?,
+                    max_boosts: row.get(6)?,
+                    has_self_effects: row.get(7)?,
+                    boosts_allowed,
                 })
             })
             .ok();

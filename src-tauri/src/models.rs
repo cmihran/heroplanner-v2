@@ -24,6 +24,7 @@ pub struct Origin {
 pub struct PowersetCategory {
     pub powerset_name: String,
     pub display_name: String,
+    pub icon: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -88,6 +89,7 @@ pub struct Template {
 pub struct PowersetWithPowers {
     pub powerset_name: String,
     pub display_name: String,
+    pub icon: Option<String>,
     pub powers: Vec<PowerSummary>,
 }
 
@@ -223,6 +225,9 @@ pub struct InherentPowerInfo {
     pub display_short_help: Option<String>,
     pub icon: String,
     pub power_type: String,
+    pub max_boosts: i32,
+    pub has_self_effects: bool,
+    pub boosts_allowed: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -231,6 +236,17 @@ pub struct InherentPowersResult {
     pub at_inherent: Option<InherentPowerInfo>,
     pub core_powers: Vec<InherentPowerInfo>,
     pub fitness_powers: Vec<InherentPowerInfo>,
+}
+
+// --- Enhancement strength result ---
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EnhancementStrength {
+    pub attrib: String,
+    pub display_attrib: String,
+    pub strength: f64,
+    pub display_strength: String,
 }
 
 // --- Enhancement calculation input ---
@@ -266,6 +282,8 @@ pub struct HeroBuildFile {
     pub selected_pool3: Option<String>,
     pub selected_pool4: Option<String>,
     pub powers: Vec<SavedPower>,
+    #[serde(default)]
+    pub inherent_powers: Vec<SavedPower>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

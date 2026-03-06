@@ -16,6 +16,8 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
   const canAddMore = useHeroStore((s) => s.canAddMoreSlots);
   const swapPowerLevels = useHeroStore((s) => s.swapPowerLevels);
   const togglePowerActive = useHeroStore((s) => s.togglePowerActive);
+  const setDetailPaneTarget = useHeroStore((s) => s.setDetailPaneTarget);
+  const toggleDetailPaneLock = useHeroStore((s) => s.toggleDetailPaneLock);
 
   const [dragOver, setDragOver] = useState(false);
   const [slotDragging, setSlotDragging] = useState(false);
@@ -152,6 +154,8 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
     <div
       className={`group transition-colors ${!isActive && showToggle ? 'opacity-50 saturate-50' : ''}`}
       {...dragProps}
+      onMouseEnter={() => setDetailPaneTarget({ type: 'power', key: power.full_name })}
+      onContextMenu={(e) => { e.preventDefault(); toggleDetailPaneLock(); }}
     >
       {/* Power info bar — pill shape with protruding icon, draggable for reordering */}
       <div

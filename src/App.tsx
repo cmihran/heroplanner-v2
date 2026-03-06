@@ -5,10 +5,11 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { Header } from '@/components/planner/Header';
 import { LeftPanel } from '@/components/planner/LeftPanel';
 import { RightPanel } from '@/components/planner/RightPanel';
-import { ConfirmDialog } from '@/components/planner/ConfirmDialog';
+import { ConfirmDialog, confirm } from '@/components/planner/ConfirmDialog';
 import { useHeroStore } from '@/stores/heroStore';
 
 const appWindow = getCurrentWindow();
+const isTauri = '__TAURI_INTERNALS__' in window;
 const EDGE = 6; // px resize zone
 
 const edges = [
@@ -28,6 +29,20 @@ function App() {
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
+
+  // Intercept OS-level window close (Alt+F4, taskbar close) to warn about unsaved changes
+  useEffect(() => {
+    if (!isTauri) return;
+    const unlisten = appWindow.onCloseRequested(async (event) => {
+      const dirty = useHeroStore.getState().isDirty;
+      if (dirty) {
+        event.preventDefault();
+        const ok = await confirm('Unsaved Changes', 'You have unsaved changes. Close without saving?', 'Close');
+        if (ok) appWindow.destroy();
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
 
   return (
     <div className="relative h-screen flex flex-col bg-coh-primary text-foreground overflow-hidden rounded-lg border border-coh-secondary">
@@ -50,12 +65,7 @@ function App() {
         />
       ))}
       <Header />
-      <div
-        className="h-[2px] flex-shrink-0"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, #3588e0 20%, #c8a84e 50%, #3588e0 80%, transparent 100%)',
-        }}
-      />
+      <div className="h-[2px] flex-shrink-0 header-divider" />
       <ResizablePanelGroup className="flex-1">
         <ResizablePanel defaultSize={30} minSize={20}>
           <LeftPanel />

@@ -2,11 +2,12 @@ use std::collections::HashMap;
 use rusqlite::Connection;
 use tauri::State;
 
-use super::utils::{categorize_attrib, format_scale};
+use super::utils::{categorize_attrib, format_attrib, format_scale};
 use crate::db::DbState;
 use crate::models::{
-    ActiveSetBonus, CalculatedEffect, CombinedStat, PowerSlottedEnhancements,
-    SlottedEnhancement, SlottedSetInfo, StatCap, StatSource, TotalStatsResult,
+    ActiveSetBonus, CalculatedEffect, CombinedStat, EnhancementStrength,
+    PowerSlottedEnhancements, SlottedEnhancement, SlottedSetInfo, StatCap, StatSource,
+    TotalStatsResult,
 };
 
 /// Enhancement Diversification (ED): 3-zone piecewise diminishing returns.
@@ -80,6 +81,10 @@ fn compute_enhancement_strengths(
 /// Get enhancement effect data: Vec of (attribs, table_name, scale).
 /// Tries powers table first (works for set boosts and plain IO raw keys),
 /// then falls back to boosts.raw_json (for plain IO aliases like "Enhance Accuracy").
+///
+/// For enhancements with the CombatModMagnitude flag that use a flat table (Melee_Ones),
+/// the table is replaced with the IO schedule table (Melee_Boosts_33) and scale is set to 1.0,
+/// so that table_value * scale gives the correct level-scaled enhancement strength.
 fn get_enhancement_effect_data(
     db: &Connection,
     boost_key: &str,
@@ -94,7 +99,7 @@ fn get_enhancement_effect_data(
 
     if let Ok(pid) = power_id {
         if let Ok(mut stmt) = db.prepare(
-            "SELECT et.attribs_json, et.table_name, et.scale
+            "SELECT et.attribs_json, et.table_name, et.scale, et.raw_json
              FROM power_effects pe
              JOIN effect_templates et ON et.effect_id = pe.id
              WHERE pe.power_id = ?1",
@@ -104,8 +109,10 @@ fn get_enhancement_effect_data(
                     let attribs_json: String = row.get(0)?;
                     let table_name: String = row.get(1)?;
                     let scale: f64 = row.get(2)?;
+                    let tmpl_raw: String = row.get(3)?;
                     let attribs: Vec<String> =
                         serde_json::from_str(&attribs_json).unwrap_or_default();
+                    let (table_name, scale) = apply_combat_mod_substitution(&table_name, scale, &tmpl_raw);
                     Ok((attribs, table_name, scale))
                 })
                 .ok()
@@ -147,6 +154,12 @@ fn get_enhancement_effect_data(
                                 .get("attribs")
                                 .and_then(|a| serde_json::from_value(a.clone()).ok())
                                 .unwrap_or_default();
+                            // Check CombatModMagnitude flag in template flags
+                            let flags_str = template
+                                .get("flags")
+                                .and_then(|f| serde_json::to_string(f).ok())
+                                .unwrap_or_default();
+                            let (table, scale) = apply_combat_mod_substitution(&table, scale, &flags_str);
                             if !table.is_empty() && !attribs.is_empty() {
                                 results.push((attribs, table, scale));
                             }
@@ -159,6 +172,24 @@ fn get_enhancement_effect_data(
     }
 
     Vec::new()
+}
+
+/// When an enhancement template has both CombatModMagnitude and Boost flags
+/// and uses a flat table (e.g. Melee_Ones = all 1.0), replace with the IO
+/// schedule table so that table_value * scale gives the correct level-scaled
+/// enhancement strength. The Boost flag distinguishes regular enhancement effects
+/// from procs which also have CombatModMagnitude but should keep their flat values.
+fn apply_combat_mod_substitution(table_name: &str, scale: f64, raw_json: &str) -> (String, f64) {
+    let has_combat_mod = raw_json.contains("CombatModMagnitude");
+    let has_boost = raw_json.contains("Boost (12)");
+    let table_lower = table_name.to_lowercase();
+    if has_combat_mod && has_boost && table_lower.ends_with("_ones") {
+        // Replace flat table with IO schedule table (33% schedule for standard IOs)
+        let prefix = &table_lower[..table_lower.len() - 5]; // strip "_ones"
+        (format!("{}_boosts_33", prefix), 1.0)
+    } else {
+        (table_name.to_string(), scale)
+    }
 }
 
 #[tauri::command]
@@ -786,4 +817,53 @@ pub fn calculate_total_stats(
         effective_end,
         end_per_sec,
     })
+}
+
+/// Get the enhancement strength values for a single enhancement at a given level.
+/// Returns per-attrib strength (before ED, raw percentage).
+#[tauri::command]
+pub fn get_enhancement_values(
+    state: State<DbState>,
+    archetype_id: i64,
+    boost_key: &str,
+    level: usize,
+    is_attuned: bool,
+) -> Result<Vec<EnhancementStrength>, String> {
+    let db = state.0.lock().map_err(|e| e.to_string())?;
+
+    let _ = is_attuned; // attuned uses same level for display purposes
+    let enh_level = level;
+
+    let effect_data = get_enhancement_effect_data(&db, boost_key);
+    let mut results = Vec::new();
+
+    for (attribs, table_name, scale) in effect_data {
+        let table_value: f64 = db
+            .query_row(
+                "SELECT values_json FROM archetype_tables
+                 WHERE archetype_id = ?1 AND table_name = ?2",
+                rusqlite::params![archetype_id, table_name.to_lowercase()],
+                |row| row.get::<_, String>(0),
+            )
+            .ok()
+            .and_then(|json| {
+                let values: Vec<f64> = serde_json::from_str(&json).ok()?;
+                values.get(enh_level).copied()
+            })
+            .unwrap_or(0.0);
+
+        let strength = table_value * scale;
+
+        for attrib in &attribs {
+            let display = format_attrib(attrib);
+            results.push(EnhancementStrength {
+                attrib: attrib.clone(),
+                display_attrib: display.to_string(),
+                strength,
+                display_strength: format!("{:.1}%", strength * 100.0),
+            });
+        }
+    }
+
+    Ok(results)
 }

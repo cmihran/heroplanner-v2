@@ -17,7 +17,7 @@ heroplanner-v2/
   src/                          # React frontend (thin display layer)
     components/
       ui/                       # shadcn/ui primitives (Button, Card, Select, Tabs, HoverCard, etc.)
-      planner/                  # App components (Header, LeftPanel, RightPanel, HeroInfo, PowerSetSelector, PowerSlotCard, EnhancementSlot, EnhancementPicker, BoostSetBrowser, PowerHoverCard, EnhancementHoverCard, Settings, TotalStatsTab, SetBonusesTab)
+      planner/                  # App components (Header, LeftPanel, RightPanel, HeroInfo, PowerSetSelector, PowerSlotCard, EnhancementSlot, EnhancementPicker, BoostSetBrowser, PowerHoverCard, EnhancementHoverCard, Settings, TotalStatsTab, SetBonusesTab, DetailPane, InherentsTab, IncarnatesTab, AccoladesTab)
     lib/
       api.ts                    # Typed invoke() wrappers for Tauri commands
       mock-data.ts              # Mock data for browser dev mode (no Tauri)
@@ -84,7 +84,7 @@ heroplanner-v2/
 ### DONE — compiles clean
 - Full project scaffolding (Tauri v2 + React + Vite + Tailwind v4)
 - All npm dependencies installed (Zustand, Radix UI, shadcn/ui primitives, lucide-react, react-resizable-panels v4)
-- Rust backend: models, DB connection, 15 Tauri commands (archetypes, powersets, powers, boosts, calc, builds, settings, total stats)
+- Rust backend: models, DB connection, 16 Tauri commands (archetypes, powersets, powers, boosts, calc, builds, settings, total stats, get_enhancement_values)
 - React frontend: Zustand store, API wrapper, all UI components (Header, HeroInfo, PowerSetSelector, PowerSlotCard, LeftPanel, RightPanel)
 - Enhancement picker UI: Popover with IO tab (plain enhancements) and Sets tab (BoostSetBrowser with category → set → boost drill-down)
 - HoverCards: PowerHoverCard (stats grid with TO icons + description on power hover), EnhancementHoverCard (set pieces + set bonuses with resolved values on enhancement hover)
@@ -113,6 +113,18 @@ heroplanner-v2/
 - PowerSlotCard redesigned: pill/capsule shape with protruding power icon (in-game style), glossy gradient, enhancement slots overlap bottom edge, ghost add-button on hover
 - Plain IO enhancements now in DB: migration imports `powers/boosts/*.json` (generic + dual-aspect) with effect data for future scaling/ED calculations
 - Save/load fix: `resolve_boost_keys` skips missing keys (was failing entirely); frontend falls back to `IO_ICONS` for plain IO enhancements
+- Powerset icons in dropdown selectors (uses first power's icon from each powerset)
+- Villain theme: red/crimson CSS variable overrides via `[data-theme="villain"]`, toggle in Settings
+- Detail pane: resizable split in RightPanel showing power/enhancement details on hover, with lock and minimize
+- Inherent powers tab: AT inherent + core powers (Brawl/Sprint/Rest) + fitness powers with enhancement slotting, save/load support
+- Incarnates tab and Accolades tab (placeholder UI)
+- Enhancement % values: `get_enhancement_values` command shows enhancement strength in picker, hover cards, and detail pane
+- Plain IO enhancement value fix: `apply_combat_mod_substitution` replaces `*_ones` tables with `*_boosts_33` IO schedule when `CombatModMagnitude` + `Boost (12)` flags present
+- Power grid column-major ordering with responsive row counts via `grid-flow-col`
+- Powerset change confirmation dialog when powers are already selected from that set
+- Powerset deselect (clear) button with confirmation
+- Window close confirmation when build has unsaved changes (both X button and Alt+F4)
+- Settings: hover cards toggle (disable power/enhancement hover popups), shimmer toggle, theme selector
 
 ### Data Migration Workflow
 Drop a new `raw_data_*.zip` in the project root and run:
@@ -122,9 +134,8 @@ python3 scripts/migrate-zip-to-sqlite.py --zip <path>  # or specify explicitly
 ```
 
 ### FUTURE WORK (not yet built)
-- Inherents tab (archetype inherent powers)
-- Incarnates tab (incarnate system)
-- Accolades tab (accolade powers)
+- Incarnates tab (full incarnate system — currently placeholder)
+- Accolades tab (full accolade powers — currently placeholder)
 - Enhancement Diversification (diminishing returns calculation)
 - Simulation engine (the main reason for choosing Rust — not started yet)
 
@@ -132,6 +143,9 @@ python3 scripts/migrate-zip-to-sqlite.py --zip <path>  # or specify explicitly
 - `heroplanner-zoom` — zoom factor (default 1.5), applied as root font-size (factor × 16px)
 - `heroplanner-save-dir` — default save directory path for file dialogs
 - `heroplanner-last-build` — path to last saved/loaded `.hero` file (auto-loaded on startup)
+- `heroplanner-shimmer` — vital bar shimmer animation (default true)
+- `heroplanner-theme` — color theme: `'hero'` (blue, default) or `'villain'` (red)
+- `heroplanner-hover` — hover cards enabled (default true, `'false'` disables)
 
 ## Code Style
 
@@ -170,6 +184,9 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 | `load_build` | app, default_dir? | `Option<LoadBuildResult>` |
 | `load_build_from_path` | path | `HeroBuildFile` |
 | `resolve_boost_keys` | boost_keys | `Vec<ResolvedBoost>` |
+| `get_enhancement_values` | archetype_id, boost_key, level, is_attuned | `Vec<EnhancementStrength>` |
+| `get_inherent_powers` | archetype_name | `InherentPowersResult` |
+| `load_powersets_for_category` | category_name | `Vec<PowersetWithPowers>` |
 | `pick_directory` | app, default_dir? | `Option<String>` |
 
 ## Known Quirks
@@ -187,6 +204,9 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 - Effect template `aspect` field determines how values combine: "Strength"/"Current" = percentage multiplier, "Maximum"/"Absolute" = flat addition. HP bonuses from powers (e.g. True Grit) use "Maximum" aspect — flat HP additions, NOT percentages.
 - Endurance recovery formula (from wiki): `EPS = MaxEnd * totalRecovery / 60`. The bar fills 0→100% in 60 seconds at base recovery. Base `attrib_base.recovery` = 1.0 for most ATs (1.05 for Arachnos).
 - HP regeneration uses same pattern: `HP/s = effectiveHP * totalRegen / 60`. Base `attrib_base.regeneration` = 0.25 for most ATs.
+- Plain IO enhancement values: templates use flat `*_ones` tables with tiny scale (e.g. 0.0833). The game engine applies IO schedule via `CombatModMagnitude` flag. `apply_combat_mod_substitution` in calc.rs detects `CombatModMagnitude` + `Boost (12)` flags and replaces `*_ones` → `*_boosts_33` with scale 1.0. Procs excluded (no `Boost` flag). Set IOs unaffected (already use `*_boosts_33`).
+- Powerset `icon` field in DB often points to `*_set.png` files that don't exist in our image assets. Always use first power's icon via SQL subquery instead of `COALESCE(p.icon, ...)`.
+- `HeroBuildFile.inherent_powers` uses `#[serde(default)]` for backward compatibility with save files that predate inherent slotting.
 
 ## Project Status
 - **v2** (`/home/charl/dev/heroplanner-v2`): Tauri v2 + React + TypeScript + Tailwind v4 + shadcn/ui + Zustand + Rust/SQLite backend. Compiles clean (TS + Rust). Database populated with game data.

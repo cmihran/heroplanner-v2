@@ -27,7 +27,7 @@ function makePower(id: number, psName: string, name: string, displayName: string
 
 const powersetData: Record<string, PowersetWithPowers[]> = {
   Blaster_Ranged: [
-    { powerset_name: 'Fire_Blast', display_name: 'Fire Blast', powers: [
+    { powerset_name: 'Fire_Blast', display_name: 'Fire Blast', icon: null, powers: [
       makePower(101, 'Fire_Blast', 'Flare', 'Flare', 1, 'Click', 'A quick fire blast. Fast, but weak.'),
       makePower(102, 'Fire_Blast', 'FireBall', 'Fire Ball', 1, 'Click', 'A ball of fire that explodes on impact, dealing AoE damage.'),
       makePower(103, 'Fire_Blast', 'FireBlast', 'Fire Blast', 2, 'Click', 'Sends a blast of fire at a single target.'),
@@ -38,7 +38,7 @@ const powersetData: Record<string, PowersetWithPowers[]> = {
       makePower(108, 'Fire_Blast', 'Blaze', 'Blaze', 18, 'Click', 'A devastating short-range blast of intense fire.'),
       makePower(109, 'Fire_Blast', 'Inferno', 'Inferno', 26, 'Click', 'Surrounds the caster in a massive inferno, devastating all nearby foes.'),
     ]},
-    { powerset_name: 'Ice_Blast', display_name: 'Ice Blast', powers: [
+    { powerset_name: 'Ice_Blast', display_name: 'Ice Blast', icon: null, powers: [
       makePower(201, 'Ice_Blast', 'IceBolt', 'Ice Bolt', 1, 'Click', 'A quick bolt of ice. Fast, but low damage.'),
       makePower(202, 'Ice_Blast', 'IceBlast', 'Ice Blast', 1, 'Click', 'Sends a powerful blast of ice at a single target.'),
       makePower(203, 'Ice_Blast', 'FrostBreath', 'Frost Breath', 2, 'Click', 'Breathes a cone of frost, slowing and damaging foes.'),
@@ -48,7 +48,7 @@ const powersetData: Record<string, PowersetWithPowers[]> = {
       makePower(207, 'Ice_Blast', 'BitterIceBlast', 'Bitter Ice Blast', 18, 'Click', 'Extremely powerful ice blast. Slow recharge.'),
       makePower(208, 'Ice_Blast', 'Blizzard', 'Blizzard', 26, 'Click', 'Summons a massive blizzard at a targeted location.'),
     ]},
-    { powerset_name: 'Energy_Blast', display_name: 'Energy Blast', powers: [
+    { powerset_name: 'Energy_Blast', display_name: 'Energy Blast', icon: null, powers: [
       makePower(301, 'Energy_Blast', 'PowerBolt', 'Power Bolt', 1, 'Click', 'A quick bolt of energy. Fast, but weak.'),
       makePower(302, 'Energy_Blast', 'PowerBlast', 'Power Blast', 1, 'Click', 'A strong blast of energy with knockback.'),
       makePower(303, 'Energy_Blast', 'EnergyTorrent', 'Energy Torrent', 2, 'Click', 'A cone of energy that knocks foes back.'),
@@ -60,7 +60,7 @@ const powersetData: Record<string, PowersetWithPowers[]> = {
     ]},
   ],
   Blaster_Support: [
-    { powerset_name: 'Fire_Manipulation', display_name: 'Fire Manipulation', powers: [
+    { powerset_name: 'Fire_Manipulation', display_name: 'Fire Manipulation', icon: null, powers: [
       makePower(401, 'Fire_Manipulation', 'RingOfFire', 'Ring of Fire', 1, 'Click', 'Immobilizes a target in a ring of fire.'),
       makePower(402, 'Fire_Manipulation', 'FireSword', 'Fire Sword', 2, 'Click', 'Summons a sword of fire for melee attacks.'),
       makePower(403, 'Fire_Manipulation', 'Combustion', 'Combustion', 4, 'Click', 'A PBAoE fire attack that burns nearby enemies.'),
@@ -70,7 +70,7 @@ const powersetData: Record<string, PowersetWithPowers[]> = {
       makePower(407, 'Fire_Manipulation', 'Consume', 'Consume', 18, 'Click', 'Drains endurance from nearby foes.'),
       makePower(408, 'Fire_Manipulation', 'BurnM', 'Burn', 26, 'Click', 'Creates a patch of fire that damages foes who stand in it.'),
     ]},
-    { powerset_name: 'Ice_Manipulation', display_name: 'Ice Manipulation', powers: [
+    { powerset_name: 'Ice_Manipulation', display_name: 'Ice Manipulation', icon: null, powers: [
       makePower(501, 'Ice_Manipulation', 'ChillingGrasp', 'Chilling Grasp', 1, 'Click', 'A melee attack that slows the target.'),
       makePower(502, 'Ice_Manipulation', 'IceSword', 'Ice Sword', 2, 'Click', 'Summons a sword of ice for melee attacks.'),
       makePower(503, 'Ice_Manipulation', 'FrozenFists', 'Frozen Fists', 4, 'Click', 'A series of ice-enhanced punches.'),
@@ -80,7 +80,7 @@ const powersetData: Record<string, PowersetWithPowers[]> = {
       makePower(507, 'Ice_Manipulation', 'FrozenArmor', 'Frozen Armor', 18, 'Toggle', 'Provides defense against lethal and smashing damage.'),
       makePower(508, 'Ice_Manipulation', 'IceStormM', 'Ice Storm', 26, 'Click', 'Summons a freezing storm that damages and slows.'),
     ]},
-    { powerset_name: 'Energy_Manipulation', display_name: 'Energy Manipulation', powers: [
+    { powerset_name: 'Energy_Manipulation', display_name: 'Energy Manipulation', icon: null, powers: [
       makePower(601, 'Energy_Manipulation', 'PowerThrust', 'Power Thrust', 1, 'Click', 'A melee attack with minor knockback.'),
       makePower(602, 'Energy_Manipulation', 'EnergyPunch', 'Energy Punch', 2, 'Click', 'A strong punch infused with energy.'),
       makePower(603, 'Energy_Manipulation', 'BoneSmasher', 'Bone Smasher', 4, 'Click', 'A devastating melee energy attack with stun.'),
@@ -92,37 +92,37 @@ const powersetData: Record<string, PowersetWithPowers[]> = {
     ]},
   ],
   Power_Pool: [
-    { powerset_name: 'Pool_Flight', display_name: 'Flight', powers: [
+    { powerset_name: 'Pool_Flight', display_name: 'Flight', icon: null, powers: [
       makePower(701, 'Pool_Flight', 'Hover', 'Hover', 4, 'Toggle', 'Allows you to hover above the ground.'),
       makePower(702, 'Pool_Flight', 'AirSuperiority', 'Air Superiority', 4, 'Click', 'A melee attack that knocks airborne foes down.'),
       makePower(703, 'Pool_Flight', 'Fly', 'Fly', 14, 'Toggle', 'Allows true flight at high speeds.'),
       makePower(704, 'Pool_Flight', 'Afterburner', 'Afterburner', 20, 'Toggle', 'Greatly increases flight speed.'),
     ]},
-    { powerset_name: 'Pool_Speed', display_name: 'Speed', powers: [
+    { powerset_name: 'Pool_Speed', display_name: 'Speed', icon: null, powers: [
       makePower(801, 'Pool_Speed', 'Flurry', 'Flurry', 4, 'Click', 'A rapid series of punches.'),
       makePower(802, 'Pool_Speed', 'Hasten', 'Hasten', 4, 'Click', 'Greatly increases recharge rate for a short time.'),
       makePower(803, 'Pool_Speed', 'SuperSpeed', 'Super Speed', 14, 'Toggle', 'Run at incredible speeds.'),
       makePower(804, 'Pool_Speed', 'SpeedPhase', 'Speed Phase', 20, 'Click', 'Phase out of existence, becoming intangible.'),
     ]},
-    { powerset_name: 'Pool_Leaping', display_name: 'Leaping', powers: [
+    { powerset_name: 'Pool_Leaping', display_name: 'Leaping', icon: null, powers: [
       makePower(901, 'Pool_Leaping', 'Jump', 'Combat Jumping', 4, 'Toggle', 'Gives a small defense bonus and allows jumping.'),
       makePower(902, 'Pool_Leaping', 'Kick', 'Jump Kick', 4, 'Click', 'A jumping kick attack.'),
       makePower(903, 'Pool_Leaping', 'SuperJump', 'Super Jump', 14, 'Toggle', 'Leap enormous distances.'),
       makePower(904, 'Pool_Leaping', 'Acrobatics', 'Acrobatics', 20, 'Toggle', 'Provides protection against holds and knockback.'),
     ]},
-    { powerset_name: 'Pool_Fighting', display_name: 'Fighting', powers: [
+    { powerset_name: 'Pool_Fighting', display_name: 'Fighting', icon: null, powers: [
       makePower(1001, 'Pool_Fighting', 'Boxing', 'Boxing', 4, 'Click', 'A basic boxing punch.'),
       makePower(1002, 'Pool_Fighting', 'Kick', 'Kick', 4, 'Click', 'A basic kick attack.'),
       makePower(1003, 'Pool_Fighting', 'Tough', 'Tough', 14, 'Toggle', 'Provides resistance to smashing and lethal damage.'),
       makePower(1004, 'Pool_Fighting', 'Weave', 'Weave', 20, 'Toggle', 'Provides defense to all attacks.'),
     ]},
-    { powerset_name: 'Pool_Fitness', display_name: 'Fitness', powers: [
+    { powerset_name: 'Pool_Fitness', display_name: 'Fitness', icon: null, powers: [
       makePower(1101, 'Pool_Fitness', 'Swift', 'Swift', 4, 'Auto', 'Increases running speed.'),
       makePower(1102, 'Pool_Fitness', 'Hurdle', 'Hurdle', 4, 'Auto', 'Increases jumping height.'),
       makePower(1103, 'Pool_Fitness', 'Health', 'Health', 14, 'Auto', 'Provides passive health regeneration.'),
       makePower(1104, 'Pool_Fitness', 'Stamina', 'Stamina', 20, 'Auto', 'Provides passive endurance recovery.'),
     ]},
-    { powerset_name: 'Pool_Leadership', display_name: 'Leadership', powers: [
+    { powerset_name: 'Pool_Leadership', display_name: 'Leadership', icon: null, powers: [
       makePower(1201, 'Pool_Leadership', 'Maneuvers', 'Maneuvers', 4, 'Toggle', 'Increases defense for you and nearby allies.'),
       makePower(1202, 'Pool_Leadership', 'Assault', 'Assault', 4, 'Toggle', 'Increases damage for you and nearby allies.'),
       makePower(1203, 'Pool_Leadership', 'Tactics', 'Tactics', 14, 'Toggle', 'Increases to-hit and perception for you and nearby allies.'),
@@ -134,7 +134,7 @@ const powersetData: Record<string, PowersetWithPowers[]> = {
 // Fill in missing categories with a placeholder set
 function getCategory(name: string): PowersetWithPowers[] {
   return powersetData[name] || [
-    { powerset_name: `${name}_Default`, display_name: `${name} Set`, powers: [
+    { powerset_name: `${name}_Default`, display_name: `${name} Set`, icon: null, powers: [
       makePower(9999, `${name}_Default`, 'Power1', 'Power 1', 1, 'Click', 'A placeholder power.'),
       makePower(9998, `${name}_Default`, 'Power2', 'Power 2', 1, 'Click', 'Another placeholder power.'),
       makePower(9997, `${name}_Default`, 'Power3', 'Power 3', 4, 'Click', 'A third placeholder power.'),

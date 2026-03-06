@@ -1,16 +1,22 @@
 import { useHeroStore, LEVEL_SLOTS } from '@/stores/heroStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { PowerSlotCard } from './PowerSlotCard';
 import { InherentsTab } from './InherentsTab';
 import { IncarnatesTab } from './IncarnatesTab';
 import { AccoladesTab } from './AccoladesTab';
+import { DetailPane } from './DetailPane';
 
 export function RightPanel() {
   const levelToPower = useHeroStore((s) => s.levelToPower);
   const totalSlotsAdded = useHeroStore((s) => s.totalSlotsAdded);
+  const detailPaneTarget = useHeroStore((s) => s.detailPaneTarget);
+  const detailPaneMinimized = useHeroStore((s) => s.detailPaneMinimized);
 
   const slotsRemaining = 67 - totalSlotsAdded;
+  const showDetailSplit = detailPaneTarget !== null && !detailPaneMinimized;
+  const showMinimizedBar = detailPaneMinimized;
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-coh-dark/40 via-coh-primary/20 to-coh-dark/40">
@@ -57,17 +63,42 @@ export function RightPanel() {
         </div>
 
         <TabsContent value="powers" className="flex-1 min-h-0">
-          <ScrollArea className="h-full @container">
-            <div className="p-3 grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 @xl:grid-cols-4 gap-4">
-              {LEVEL_SLOTS.map((level) => (
-                <PowerSlotCard
-                  key={level}
-                  level={level}
-                  selectedPower={levelToPower[level]}
-                />
-              ))}
+          {showDetailSplit ? (
+            <ResizablePanelGroup orientation="vertical" className="h-full">
+              <ResizablePanel defaultSize={70} minSize={30}>
+                <ScrollArea className="h-full @container">
+                  <div className="p-3 grid grid-flow-col grid-rows-[repeat(23,minmax(0,1fr))] @sm:grid-rows-[repeat(12,minmax(0,1fr))] @lg:grid-rows-[repeat(8,minmax(0,1fr))] @xl:grid-rows-[repeat(6,minmax(0,1fr))] gap-4">
+                    {LEVEL_SLOTS.map((level) => (
+                      <PowerSlotCard
+                        key={level}
+                        level={level}
+                        selectedPower={levelToPower[level]}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </ResizablePanel>
+              <ResizableHandle />
+              <ResizablePanel defaultSize={30} minSize={15}>
+                <DetailPane />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            <div className="h-full flex flex-col">
+              <ScrollArea className="flex-1 @container">
+                <div className="p-3 grid grid-flow-col grid-rows-[repeat(23,minmax(0,1fr))] @sm:grid-rows-[repeat(12,minmax(0,1fr))] @lg:grid-rows-[repeat(8,minmax(0,1fr))] @xl:grid-rows-[repeat(6,minmax(0,1fr))] gap-4">
+                  {LEVEL_SLOTS.map((level) => (
+                    <PowerSlotCard
+                      key={level}
+                      level={level}
+                      selectedPower={levelToPower[level]}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+              {showMinimizedBar && <DetailPane />}
             </div>
-          </ScrollArea>
+          )}
         </TabsContent>
 
         <TabsContent value="inherents" className="flex-1 min-h-0">

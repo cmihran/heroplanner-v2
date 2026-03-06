@@ -28,6 +28,7 @@ pub fn run() {
             commands::boosts::get_boost_set_detail,
             commands::calc::calculate_power_effects,
             commands::calc::calculate_total_stats,
+            commands::calc::get_enhancement_values,
             commands::settings::set_zoom,
             commands::builds::save_build,
             commands::builds::save_build_to_path,

@@ -44,6 +44,43 @@
   --color-ring: #357bd7;
 }
 
+[data-theme="villain"] {
+  --color-coh-primary: #2a1520;
+  --color-coh-secondary: #6b1a1a;
+  --color-coh-accent: #af0606;
+  --color-coh-dark: #1a0e14;
+  --color-coh-positive: #316b28;
+  --color-coh-negative: #87322c;
+  --color-coh-info: #ad6f8e;
+  --color-coh-warning: #e2ae1e;
+  --color-coh-gradient1: #c43030;
+  --color-coh-gradient2: #4a1525;
+  --color-coh-gradient3: #ff4a2f;
+  --color-coh-gradient4: #ff6a42;
+  --color-coh-btn-blue: #6b1a1a;
+  --color-coh-red: #87322c;
+
+  --color-background: #2a1520;
+  --color-foreground: #e8e0e2;
+  --color-card: #1a0e14;
+  --color-card-foreground: #e8e0e2;
+  --color-popover: #1a0e14;
+  --color-popover-foreground: #e8e0e2;
+  --color-primary: #c43030;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #4a1525;
+  --color-secondary-foreground: #e8e0e2;
+  --color-muted: #3a1e2a;
+  --color-muted-foreground: #ad6f8e;
+  --color-accent: #4a1525;
+  --color-accent-foreground: #e8e0e2;
+  --color-destructive: #87322c;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #5f1e3a;
+  --color-input: #5f1e3a;
+  --color-ring: #c43030;
+}
+
 html, body {
   background: transparent;
   color: var(--color-foreground);
@@ -76,4 +113,33 @@ input[type="radio"] {
 
 .vital-shimmer {
   animation: vital-shimmer 3.5s ease-in-out infinite;
+}
+
+@keyframes attuned-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0.375rem rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0.625rem rgba(245, 158, 11, 0.6);
+  }
+}
+
+.attuned-glow {
+  animation: attuned-pulse 2.5s ease-in-out infinite;
+}
+
+.header-gradient {
+  background: radial-gradient(circle, rgba(53, 136, 224, 1) 0%, rgba(0, 0, 0, 1) 100%);
+}
+
+[data-theme="villain"] .header-gradient {
+  background: radial-gradient(circle, rgba(196, 48, 48, 1) 0%, rgba(0, 0, 0, 1) 100%);
+}
+
+.header-divider {
+  background: linear-gradient(90deg, transparent 0%, #3588e0 20%, #c8a84e 50%, #3588e0 80%, transparent 100%);
+}
+
+[data-theme="villain"] .header-divider {
+  background: linear-gradient(90deg, transparent 0%, #c43030 20%, #c8a84e 50%, #c43030 80%, transparent 100%);
 }

@@ -40,7 +40,7 @@ export function Header() {
 
   return (
     <header
-      className="relative flex items-center justify-between bg-[radial-gradient(circle,rgba(53,136,224,1)_0%,rgba(0,0,0,1)_100%)] select-none"
+      className="relative flex items-center justify-between header-gradient select-none"
       data-tauri-drag-region
     >
       {/* Centered title — absolute so it's centered relative to the full window width */}
@@ -112,7 +112,14 @@ export function Header() {
         </button>
         <button
           className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-red-600 transition-colors"
-          onClick={() => appWindow.close()}
+          onClick={async () => {
+            const dirty = useHeroStore.getState().isDirty;
+            if (dirty) {
+              const ok = await confirm('Unsaved Changes', 'You have unsaved changes. Close without saving?', 'Close');
+              if (!ok) return;
+            }
+            appWindow.close();
+          }}
           title="Close"
         >
           <X className="h-4 w-4" />

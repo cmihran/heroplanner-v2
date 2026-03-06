@@ -2,6 +2,7 @@ import { useHeroStore } from '@/stores/heroStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { imageUrl } from '@/lib/images';
+import { X } from 'lucide-react';
 import type { PowersetCategory, PowerSummary } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { PowerHoverCard } from './PowerHoverCard';
@@ -11,10 +12,12 @@ interface PowerSetSelectorProps {
   choices: PowersetCategory[];
   powers: PowerSummary[];
   slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4';
+  selectedValue: string | null;
 }
 
-export function PowerSetSelector({ label, choices, powers, slot }: PowerSetSelectorProps) {
+export function PowerSetSelector({ label, choices, powers, slot, selectedValue }: PowerSetSelectorProps) {
   const selectPowerset = useHeroStore((s) => s.selectPowerset);
+  const clearPowerset = useHeroStore((s) => s.clearPowerset);
   const togglePower = useHeroStore((s) => s.togglePower);
   const powerNameToLevel = useHeroStore((s) => s.powerNameToLevel);
 
@@ -23,23 +26,38 @@ export function PowerSetSelector({ label, choices, powers, slot }: PowerSetSelec
       <label className="text-[0.6875rem] font-medium text-coh-gradient4/70 mb-1 block uppercase tracking-wider">
         {label}
       </label>
-      <Select
-        onValueChange={(name) => {
-          const ps = choices.find((c) => c.powerset_name === name);
-          if (ps) selectPowerset(slot, ps);
-        }}
-      >
-        <SelectTrigger className="mb-1 bg-coh-dark/80 border-coh-secondary/60 hover:border-coh-gradient1/60 hover:shadow-[0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200">
-          <SelectValue placeholder={`Select ${label}`} />
-        </SelectTrigger>
-        <SelectContent>
-          {choices.map((c) => (
-            <SelectItem key={c.powerset_name} value={c.powerset_name}>
-              {c.display_name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="relative flex items-center gap-1">
+        <Select
+          value={selectedValue ?? ''}
+          onValueChange={(name) => {
+            const ps = choices.find((c) => c.powerset_name === name);
+            if (ps) selectPowerset(slot, ps);
+          }}
+        >
+          <SelectTrigger className="mb-1 relative z-20 bg-coh-dark/80 border-coh-secondary/60 hover:border-coh-gradient1/60 hover:shadow-[0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200">
+            <SelectValue placeholder={`Select ${label}`} />
+          </SelectTrigger>
+          <SelectContent>
+            {choices.map((c) => (
+              <SelectItem key={c.powerset_name} value={c.powerset_name}>
+                {c.icon && (
+                  <img src={imageUrl(c.icon)} alt="" className="w-4 h-4 inline-block mr-1.5 -mt-0.5" draggable={false} />
+                )}
+                {c.display_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {selectedValue && (
+          <button
+            onClick={() => clearPowerset(slot)}
+            className="mb-1 h-6 w-6 flex items-center justify-center rounded-full text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors shrink-0"
+            title="Clear power set"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
 
       {powers.length > 0 && (
         <ScrollArea className="h-48 rounded-md border border-coh-secondary/40 bg-coh-dark/40 shadow-[inset_0_0.25rem_0.375rem_rgba(0,0,0,0.3),inset_0_-0.25rem_0.375rem_rgba(0,0,0,0.15)]">

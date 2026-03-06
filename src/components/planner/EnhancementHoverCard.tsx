@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { useHeroStore } from '@/stores/heroStore';
+import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
-import type { SlottedBoost, BoostSetDetail } from '@/types/models';
+import type { SlottedBoost, BoostSetDetail, EnhancementStrength } from '@/types/models';
 
 interface EnhancementHoverCardProps {
   boost: SlottedBoost;
@@ -12,8 +13,13 @@ interface EnhancementHoverCardProps {
 
 export function EnhancementHoverCard({ boost, children, side }: EnhancementHoverCardProps) {
   const [setDetail, setSetDetail] = useState<BoostSetDetail | null>(null);
+  const [strengths, setStrengths] = useState<EnhancementStrength[] | null>(null);
   const [loading, setLoading] = useState(false);
   const fetchBoostSetDetail = useHeroStore((s) => s.fetchBoostSetDetail);
+  const archetype = useHeroStore((s) => s.archetype);
+
+  const disabled = localStorage.getItem('heroplanner-hover') === 'false';
+  if (disabled) return <>{children}</>;
 
   const hasSet = !!boost.setName;
 
@@ -26,20 +32,33 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
           setLoading(false);
         });
       }
+      // Fetch enhancement strengths on open
+      if (open && !strengths && archetype) {
+        api.getEnhancementValues(archetype.id, boost.boostKey, 49, boost.isAttuned)
+          .then(setStrengths)
+          .catch(() => {});
+      }
     },
-    [hasSet, setDetail, fetchBoostSetDetail, boost.setName]
+    [hasSet, setDetail, fetchBoostSetDetail, boost.setName, boost.boostKey, boost.isAttuned, strengths, archetype]
   );
+
+  const strengthsLabel = strengths?.length
+    ? strengths.map((s) => `${s.displayAttrib}: ${s.displayStrength}`).join(', ')
+    : null;
 
   // For plain IOs (no set), just show a simple tooltip-like card
   if (!hasSet) {
     return (
-      <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleOpenChange}>
         <HoverCardTrigger asChild>{children}</HoverCardTrigger>
         <HoverCardContent side={side} className="w-auto max-w-64 p-2 text-xs">
           <div className="flex items-center gap-2">
             {boost.icon && <img src={imageUrl(boost.icon)} alt="" className="w-5 h-5" />}
             <span>{boost.computedName ?? boost.boostKey}</span>
           </div>
+          {strengthsLabel && (
+            <div className="text-coh-info/70 mt-1 text-[0.625rem]">{strengthsLabel}</div>
+          )}
         </HoverCardContent>
       </HoverCard>
     );
@@ -56,14 +75,14 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
             <div className="h-3 bg-muted rounded w-full" />
           </div>
         ) : (
-          <SetHoverContent boost={boost} detail={setDetail} />
+          <SetHoverContent boost={boost} detail={setDetail} strengthsLabel={strengthsLabel} />
         )}
       </HoverCardContent>
     </HoverCard>
   );
 }
 
-function SetHoverContent({ boost, detail }: { boost: SlottedBoost; detail: BoostSetDetail }) {
+function SetHoverContent({ boost, detail, strengthsLabel }: { boost: SlottedBoost; detail: BoostSetDetail; strengthsLabel: string | null }) {
   return (
     <div>
       {/* Enhancement name */}
@@ -71,6 +90,9 @@ function SetHoverContent({ boost, detail }: { boost: SlottedBoost; detail: Boost
         {boost.icon && <img src={imageUrl(boost.icon)} alt="" className="w-5 h-5" />}
         <span className="font-semibold text-xs">{boost.computedName ?? boost.boostKey}</span>
       </div>
+      {strengthsLabel && (
+        <div className="text-coh-info/70 text-[0.625rem] mb-1">{strengthsLabel}</div>
+      )}
 
       {/* Set header */}
       <div className="text-xs text-muted-foreground mb-2">

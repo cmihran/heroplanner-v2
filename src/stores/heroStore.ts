@@ -70,6 +70,14 @@ interface HeroState {
   totalStatsResult: TotalStatsResult | null;
   totalStatsLoading: boolean;
 
+  // Inherent power slots (Fitness powers that can be slotted)
+  inherentSlots: Record<string, { numSlots: number; boosts: Record<number, SlottedBoost>; isActive: boolean }>;
+
+  // Detail pane
+  detailPaneTarget: { type: 'power' | 'enhancement'; key: string; powerName?: string } | null;
+  detailPaneLocked: boolean;
+  detailPaneMinimized: boolean;
+
   // Cache
   powerDetailCache: Record<string, PowerDetail>;
   boostSetDetailCache: Record<string, BoostSetDetail>;
@@ -79,7 +87,8 @@ interface HeroState {
   selectArchetype: (archetype: Archetype) => Promise<void>;
   selectOrigin: (origin: Origin) => void;
   setHeroName: (name: string) => void;
-  selectPowerset: (slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4', ps: PowersetCategory) => void;
+  selectPowerset: (slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4', ps: PowersetCategory) => Promise<void>;
+  clearPowerset: (slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4') => Promise<void>;
   togglePower: (power: PowerSummary) => void;
   addSlot: (powerName: string) => void;
   removeSlot: (powerName: string) => void;
@@ -91,6 +100,14 @@ interface HeroState {
   removeBoostFromSlot: (powerName: string, slotIndex: number) => void;
   swapPowerLevels: (fromLevel: number, toLevel: number) => void;
   togglePowerActive: (powerName: string) => void;
+  addInherentSlot: (powerName: string) => void;
+  removeInherentSlotAt: (powerName: string, slotIndex: number) => void;
+  setInherentBoost: (powerName: string, slotIndex: number, boost: SlottedBoost) => void;
+  removeInherentBoost: (powerName: string, slotIndex: number) => void;
+  toggleInherentActive: (powerName: string) => void;
+  setDetailPaneTarget: (target: { type: 'power' | 'enhancement'; key: string; powerName?: string } | null) => void;
+  toggleDetailPaneLock: () => void;
+  toggleDetailPaneMinimized: () => void;
   refreshTotalStats: () => Promise<void>;
   clearBuild: () => void;
   saveBuild: () => Promise<void>;
@@ -155,6 +172,10 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   isDirty: false,
   totalStatsResult: null,
   totalStatsLoading: false,
+  inherentSlots: {},
+  detailPaneTarget: null,
+  detailPaneLocked: false,
+  detailPaneMinimized: false,
   powerDetailCache: {},
   boostSetDetailCache: {},
 
@@ -221,7 +242,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
 
     // Build choices from the preloaded data
     const toChoices = (data: PowersetWithPowers[]): PowersetCategory[] =>
-      data.map((ps) => ({ powerset_name: ps.powerset_name, display_name: ps.display_name }));
+      data.map((ps) => ({ powerset_name: ps.powerset_name, display_name: ps.display_name, icon: ps.icon ?? null }));
 
     // Index all powers by powerset name for instant lookup
     const preloadedPowers = {
@@ -241,7 +262,56 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   selectOrigin: (origin) => set({ origin, isDirty: true }),
   setHeroName: (name) => set({ heroName: name, isDirty: true }),
 
-  selectPowerset: (slot, ps) => {
+  selectPowerset: async (slot, ps) => {
+    const state = get();
+
+    // Find which powerset is currently in this slot
+    const slotToSelected: Record<string, string | null> = {
+      primary: state.selectedPrimary,
+      secondary: state.selectedSecondary,
+      pool1: state.selectedPool1,
+      pool2: state.selectedPool2,
+      pool3: state.selectedPool3,
+      pool4: state.selectedPool4,
+    };
+    const currentPsName = slotToSelected[slot];
+
+    // Check if any selected powers belong to the current powerset
+    if (currentPsName) {
+      const currentPowers = state.preloadedPowers[currentPsName] || [];
+      const affectedPowers = currentPowers.filter((p) => p.full_name in state.powerNameToLevel);
+
+      if (affectedPowers.length > 0) {
+        const ok = await confirm(
+          'Change Power Set',
+          `Changing this power set will remove ${affectedPowers.length} selected power${affectedPowers.length > 1 ? 's' : ''}. Continue?`,
+          'Change',
+        );
+        if (!ok) return;
+
+        // Remove affected powers
+        const newLevelToPower = { ...state.levelToPower };
+        const newPowerNameToLevel = { ...state.powerNameToLevel };
+        let slotsToReturn = 0;
+
+        for (const p of affectedPowers) {
+          const level = newPowerNameToLevel[p.full_name];
+          const selected = newLevelToPower[level];
+          if (selected) {
+            slotsToReturn += selected.numSlots - (p.max_boosts > 0 ? 1 : 0);
+            newLevelToPower[level] = null;
+          }
+          delete newPowerNameToLevel[p.full_name];
+        }
+
+        set({
+          levelToPower: newLevelToPower,
+          powerNameToLevel: newPowerNameToLevel,
+          totalSlotsAdded: state.totalSlotsAdded - slotsToReturn,
+        });
+      }
+    }
+
     const powers = get().preloadedPowers[ps.powerset_name] || [];
     switch (slot) {
       case 'primary':
@@ -263,6 +333,62 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         set({ selectedPool4: ps.powerset_name, pool4Powers: powers, isDirty: true });
         break;
     }
+  },
+
+  clearPowerset: async (slot) => {
+    const state = get();
+    const slotToSelected: Record<string, string | null> = {
+      primary: state.selectedPrimary,
+      secondary: state.selectedSecondary,
+      pool1: state.selectedPool1,
+      pool2: state.selectedPool2,
+      pool3: state.selectedPool3,
+      pool4: state.selectedPool4,
+    };
+    const currentPsName = slotToSelected[slot];
+    if (!currentPsName) return;
+
+    const currentPowers = state.preloadedPowers[currentPsName] || [];
+    const affectedPowers = currentPowers.filter((p) => p.full_name in state.powerNameToLevel);
+
+    if (affectedPowers.length > 0) {
+      const ok = await confirm(
+        'Clear Power Set',
+        `Clearing this power set will remove ${affectedPowers.length} selected power${affectedPowers.length > 1 ? 's' : ''}. Continue?`,
+        'Clear',
+      );
+      if (!ok) return;
+
+      const newLevelToPower = { ...state.levelToPower };
+      const newPowerNameToLevel = { ...state.powerNameToLevel };
+      let slotsToReturn = 0;
+
+      for (const p of affectedPowers) {
+        const level = newPowerNameToLevel[p.full_name];
+        const selected = newLevelToPower[level];
+        if (selected) {
+          slotsToReturn += selected.numSlots - (p.max_boosts > 0 ? 1 : 0);
+          newLevelToPower[level] = null;
+        }
+        delete newPowerNameToLevel[p.full_name];
+      }
+
+      set({
+        levelToPower: newLevelToPower,
+        powerNameToLevel: newPowerNameToLevel,
+        totalSlotsAdded: state.totalSlotsAdded - slotsToReturn,
+      });
+    }
+
+    const slotToClear: Record<string, Record<string, unknown>> = {
+      primary: { selectedPrimary: null, primaryPowers: [] },
+      secondary: { selectedSecondary: null, secondaryPowers: [] },
+      pool1: { selectedPool1: null, pool1Powers: [] },
+      pool2: { selectedPool2: null, pool2Powers: [] },
+      pool3: { selectedPool3: null, pool3Powers: [] },
+      pool4: { selectedPool4: null, pool4Powers: [] },
+    };
+    set({ ...slotToClear[slot], isDirty: true });
   },
 
   togglePower: (power) => {
@@ -471,6 +597,87 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     set({ levelToPower: newLevelToPower, powerNameToLevel: newPowerNameToLevel, isDirty: true });
   },
 
+  addInherentSlot: (powerName) => {
+    const state = get();
+    const slot = state.inherentSlots[powerName] ?? { numSlots: 0, boosts: {}, isActive: true };
+    if (state.totalSlotsAdded >= MAX_TOTAL_SLOTS) return;
+    set({
+      inherentSlots: {
+        ...state.inherentSlots,
+        [powerName]: { ...slot, numSlots: slot.numSlots + 1 },
+      },
+      totalSlotsAdded: state.totalSlotsAdded + 1,
+      isDirty: true,
+    });
+  },
+
+  removeInherentSlotAt: (powerName, slotIndex) => {
+    const state = get();
+    const slot = state.inherentSlots[powerName];
+    if (!slot || slot.numSlots <= 0) return;
+    const newBoosts: Record<number, SlottedBoost> = {};
+    for (let i = 0; i < slot.numSlots - 1; i++) {
+      const srcIndex = i < slotIndex ? i : i + 1;
+      if (slot.boosts[srcIndex]) newBoosts[i] = slot.boosts[srcIndex];
+    }
+    set({
+      inherentSlots: {
+        ...state.inherentSlots,
+        [powerName]: { ...slot, numSlots: slot.numSlots - 1, boosts: newBoosts },
+      },
+      totalSlotsAdded: state.totalSlotsAdded - 1,
+      isDirty: true,
+    });
+  },
+
+  setInherentBoost: (powerName, slotIndex, boost) => {
+    const state = get();
+    const slot = state.inherentSlots[powerName] ?? { numSlots: 0, boosts: {}, isActive: true };
+    set({
+      inherentSlots: {
+        ...state.inherentSlots,
+        [powerName]: { ...slot, boosts: { ...slot.boosts, [slotIndex]: boost } },
+      },
+      isDirty: true,
+    });
+  },
+
+  removeInherentBoost: (powerName, slotIndex) => {
+    const state = get();
+    const slot = state.inherentSlots[powerName];
+    if (!slot) return;
+    const newBoosts = { ...slot.boosts };
+    delete newBoosts[slotIndex];
+    set({
+      inherentSlots: {
+        ...state.inherentSlots,
+        [powerName]: { ...slot, boosts: newBoosts },
+      },
+      isDirty: true,
+    });
+  },
+
+  toggleInherentActive: (powerName) => {
+    const state = get();
+    const slot = state.inherentSlots[powerName] ?? { numSlots: 0, boosts: {}, isActive: true };
+    set({
+      inherentSlots: {
+        ...state.inherentSlots,
+        [powerName]: { ...slot, isActive: !slot.isActive },
+      },
+      isDirty: true,
+    });
+  },
+
+  setDetailPaneTarget: (target) => {
+    if (get().detailPaneLocked) return;
+    set({ detailPaneTarget: target });
+  },
+
+  toggleDetailPaneLock: () => set((s) => ({ detailPaneLocked: !s.detailPaneLocked })),
+
+  toggleDetailPaneMinimized: () => set((s) => ({ detailPaneMinimized: !s.detailPaneMinimized })),
+
   togglePowerActive: (powerName) => {
     const state = get();
     const level = state.powerNameToLevel[powerName];
@@ -501,6 +708,12 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     for (const sp of Object.values(state.levelToPower)) {
       if (sp && sp.isActive) {
         activePowerNames.push(sp.power.full_name);
+      }
+    }
+    // Include active inherent powers
+    for (const [powerName, slot] of Object.entries(state.inherentSlots)) {
+      if (slot.isActive) {
+        activePowerNames.push(powerName);
       }
     }
 
@@ -540,6 +753,18 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         powerEnhancements.push({ powerFullName: sp.power.full_name, enhancements });
       }
     }
+    // Include inherent power enhancements
+    for (const [powerName, slot] of Object.entries(state.inherentSlots)) {
+      if (!slot.isActive) continue;
+      const enhancements = Object.values(slot.boosts).map((b) => ({
+        boostKey: b.boostKey,
+        level: b.level,
+        isAttuned: b.isAttuned,
+      }));
+      if (enhancements.length > 0) {
+        powerEnhancements.push({ powerFullName: powerName, enhancements });
+      }
+    }
 
     try {
       const result = await api.calculateTotalStats(
@@ -564,6 +789,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       heroName: '',
       isDirty: false,
       totalStatsResult: null,
+      inherentSlots: {},
     });
   },
 
@@ -587,6 +813,16 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         };
       });
 
+    const inherentPowers = Object.entries(state.inherentSlots)
+      .filter(([, s]) => s.numSlots > 0 || !s.isActive)
+      .map(([powerName, s]) => {
+        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
+        for (const [idx, b] of Object.entries(s.boosts)) {
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
+        }
+        return { level: 1, powerFullName: powerName, numSlots: s.numSlots, boosts, isActive: s.isActive };
+      });
+
     const buildData: HeroBuildFile = {
       version: 1,
       heroName: state.heroName,
@@ -599,6 +835,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       selectedPool3: state.selectedPool3,
       selectedPool4: state.selectedPool4,
       powers,
+      inherentPowers,
     };
 
     const existingPath = localStorage.getItem(LAST_BUILD_KEY);
@@ -639,6 +876,16 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         };
       });
 
+    const inherentPowers = Object.entries(state.inherentSlots)
+      .filter(([, s]) => s.numSlots > 0 || !s.isActive)
+      .map(([powerName, s]) => {
+        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
+        for (const [idx, b] of Object.entries(s.boosts)) {
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
+        }
+        return { level: 1, powerFullName: powerName, numSlots: s.numSlots, boosts, isActive: s.isActive };
+      });
+
     const buildData: HeroBuildFile = {
       version: 1,
       heroName: state.heroName,
@@ -651,6 +898,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       selectedPool3: state.selectedPool3,
       selectedPool4: state.selectedPool4,
       powers,
+      inherentPowers,
     };
 
     const defaultDir = localStorage.getItem(SAVE_DIR_KEY) ?? undefined;
@@ -688,23 +936,35 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     const origin = ORIGINS.find((o) => o.name === buildFile.originName) ?? null;
     set({ origin, heroName: buildFile.heroName });
 
-    // 4. Select powersets
+    // 4. Select powersets (no confirmation needed during load — build is fresh)
     const stateAfterAT = get();
-    const selectPs = (
+    const selectPsForLoad = (
       choices: PowersetCategory[],
       name: string | null,
       slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4',
     ) => {
       if (!name) return;
       const ps = choices.find((c) => c.powerset_name === name);
-      if (ps) get().selectPowerset(slot, ps);
+      if (ps) {
+        // Direct set (skip async confirmation — build was just reset by selectArchetype)
+        const powers = get().preloadedPowers[ps.powerset_name] || [];
+        const slotMap: Record<string, Record<string, unknown>> = {
+          primary: { selectedPrimary: ps.powerset_name, primaryPowers: powers },
+          secondary: { selectedSecondary: ps.powerset_name, secondaryPowers: powers },
+          pool1: { selectedPool1: ps.powerset_name, pool1Powers: powers },
+          pool2: { selectedPool2: ps.powerset_name, pool2Powers: powers },
+          pool3: { selectedPool3: ps.powerset_name, pool3Powers: powers },
+          pool4: { selectedPool4: ps.powerset_name, pool4Powers: powers },
+        };
+        set({ ...slotMap[slot], isDirty: true });
+      }
     };
-    selectPs(stateAfterAT.primarySetChoices, buildFile.selectedPrimary, 'primary');
-    selectPs(stateAfterAT.secondarySetChoices, buildFile.selectedSecondary, 'secondary');
-    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool1, 'pool1');
-    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool2, 'pool2');
-    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool3, 'pool3');
-    selectPs(stateAfterAT.powerPoolChoices, buildFile.selectedPool4, 'pool4');
+    selectPsForLoad(stateAfterAT.primarySetChoices, buildFile.selectedPrimary, 'primary');
+    selectPsForLoad(stateAfterAT.secondarySetChoices, buildFile.selectedSecondary, 'secondary');
+    selectPsForLoad(stateAfterAT.powerPoolChoices, buildFile.selectedPool1, 'pool1');
+    selectPsForLoad(stateAfterAT.powerPoolChoices, buildFile.selectedPool2, 'pool2');
+    selectPsForLoad(stateAfterAT.powerPoolChoices, buildFile.selectedPool3, 'pool3');
+    selectPsForLoad(stateAfterAT.powerPoolChoices, buildFile.selectedPool4, 'pool4');
 
     // 5. Build levelToPower map from saved powers
     const stateAfterPS = get();
@@ -753,9 +1013,41 @@ export const useHeroStore = create<HeroState>((set, get) => ({
 
     set({ levelToPower: newLevelToPower, powerNameToLevel: newPowerNameToLevel, totalSlotsAdded });
 
+    // 5b. Restore inherent power slots
+    const newInherentSlots: Record<string, { numSlots: number; boosts: Record<number, SlottedBoost>; isActive: boolean }> = {};
+    if (buildFile.inherentPowers) {
+      for (const sp of buildFile.inherentPowers) {
+        const boosts: Record<number, SlottedBoost> = {};
+        for (const [idx, saved] of Object.entries(sp.boosts)) {
+          boosts[Number(idx)] = {
+            boostKey: saved.boostKey,
+            icon: null,
+            computedName: null,
+            setName: saved.setName,
+            level: saved.level ?? null,
+            isAttuned: saved.isAttuned ?? false,
+          };
+        }
+        newInherentSlots[sp.powerFullName] = {
+          numSlots: sp.numSlots,
+          boosts,
+          isActive: sp.isActive ?? true,
+        };
+      }
+    }
+    set({ inherentSlots: newInherentSlots });
+
     // 6. Resolve boost keys to get icons/names
     const allBoostKeys: string[] = [];
     for (const sp of buildFile.powers) {
+      for (const saved of Object.values(sp.boosts)) {
+        if (!allBoostKeys.includes(saved.boostKey)) {
+          allBoostKeys.push(saved.boostKey);
+        }
+      }
+    }
+    // Include inherent power boost keys
+    for (const sp of (buildFile.inherentPowers ?? [])) {
       for (const saved of Object.values(sp.boosts)) {
         if (!allBoostKeys.includes(saved.boostKey)) {
           allBoostKeys.push(saved.boostKey);
@@ -802,7 +1094,31 @@ export const useHeroStore = create<HeroState>((set, get) => ({
             updatedLevelToPower[level] = { ...sp, boosts: updatedBoosts };
           }
         }
-        set({ levelToPower: updatedLevelToPower });
+        // Also resolve inherent slot boosts
+        const currentInherentSlots = { ...get().inherentSlots };
+        let inherentChanged = false;
+        for (const [powerName, slot] of Object.entries(currentInherentSlots)) {
+          const updatedBoosts = { ...slot.boosts };
+          let slotChanged = false;
+          for (const [idx, boost] of Object.entries(updatedBoosts)) {
+            const info = resolvedMap.get(boost.boostKey);
+            if (info) {
+              updatedBoosts[Number(idx)] = { ...boost, icon: info.icon, computedName: info.computedName };
+              slotChanged = true;
+            } else {
+              const ioIcon = IO_ICONS[boost.boostKey];
+              if (ioIcon) {
+                updatedBoosts[Number(idx)] = { ...boost, icon: ioIcon, computedName: boost.boostKey };
+                slotChanged = true;
+              }
+            }
+          }
+          if (slotChanged) {
+            currentInherentSlots[powerName] = { ...slot, boosts: updatedBoosts };
+            inherentChanged = true;
+          }
+        }
+        set({ levelToPower: updatedLevelToPower, ...(inherentChanged ? { inherentSlots: currentInherentSlots } : {}) });
       } catch {
         toast.warning('Some enhancement data could not be resolved', { id: 'boost-resolve-warning' });
       }

@@ -18,11 +18,13 @@ export interface Origin {
 export interface PowersetCategory {
   powerset_name: string;
   display_name: string;
+  icon: string | null;
 }
 
 export interface PowersetWithPowers {
   powerset_name: string;
   display_name: string;
+  icon: string | null;
   powers: PowerSummary[];
 }
 
@@ -139,6 +141,9 @@ export interface InherentPowerInfo {
   displayShortHelp: string | null;
   icon: string;
   powerType: string;
+  maxBoosts: number;
+  hasSelfEffects: boolean;
+  boostsAllowed: string[];
 }
 
 export interface InherentPowersResult {
@@ -148,6 +153,13 @@ export interface InherentPowersResult {
 }
 
 // --- Enhancement calculation input ---
+
+export interface EnhancementStrength {
+  attrib: string;
+  displayAttrib: string;
+  strength: number;
+  displayStrength: string;
+}
 
 export interface SlottedEnhancement {
   boostKey: string;
@@ -174,6 +186,7 @@ export interface HeroBuildFile {
   selectedPool3: string | null;
   selectedPool4: string | null;
   powers: SavedPower[];
+  inherentPowers?: SavedPower[];
 }
 
 export interface SavedPower {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useHeroStore } from '@/stores/heroStore';
 import { imageUrl } from '@/lib/images';
 import { Minus } from 'lucide-react';
 import { EnhancementPicker } from './EnhancementPicker';
@@ -15,10 +16,12 @@ interface EnhancementSlotProps {
   canAllocate?: boolean;
   onRemove?: () => void;
   canRemove?: boolean;
+  isInherent?: boolean;
 }
 
-export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAllocate, canAllocate, onRemove, canRemove }: EnhancementSlotProps) {
+export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAllocate, canAllocate, onRemove, canRemove, isInherent }: EnhancementSlotProps) {
   const [open, setOpen] = useState(false);
+  const setDetailPaneTarget = useHeroStore((s) => s.setDetailPaneTarget);
 
   // Unallocated socket — clickable to allocate a slot
   if (isEmpty) {
@@ -32,15 +35,17 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
     );
   }
 
-  const levelBadge = boost && (boost.level || boost.isAttuned) ? (
+  const levelBadge = boost && boost.level && !boost.isAttuned ? (
     <span className="absolute -bottom-0.5 -right-0.5 min-w-[0.875rem] h-[0.875rem] flex items-center justify-center rounded-full bg-coh-dark border border-border/40 text-[0.5rem] font-bold text-white/90 leading-none z-10 px-0.5">
-      {boost.isAttuned ? 'A' : boost.level}
+      {boost.level}
     </span>
   ) : null;
 
   const slotButton = boost?.icon ? (
     <button
-      className="relative w-[2.5rem] h-[2.5rem] flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
+      className={`relative w-[2.5rem] h-[2.5rem] flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80 rounded-full ${
+        boost.isAttuned ? 'ring-2 ring-amber-400 shadow-[0_0_0.5rem_rgba(245,158,11,0.4)] attuned-glow' : ''
+      }`}
     >
       <img src={imageUrl(boost.icon)} alt={boost.computedName ?? ''} className="w-[2.5rem] h-[2.5rem]" />
       {levelBadge}
@@ -51,8 +56,14 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
     />
   );
 
+  const handleEnhancementHover = () => {
+    if (boost) {
+      setDetailPaneTarget({ type: 'enhancement', key: boost.boostKey, powerName: powerFullName });
+    }
+  };
+
   const content = (
-    <div className="relative group/slot">
+    <div className="relative group/slot" onMouseEnter={handleEnhancementHover}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           {slotButton}
@@ -62,6 +73,7 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
             powerFullName={powerFullName}
             slotIndex={slotIndex}
             onSelect={() => setOpen(false)}
+            isInherent={isInherent}
           />
         </PopoverContent>
       </Popover>
