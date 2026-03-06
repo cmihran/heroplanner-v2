@@ -2,12 +2,12 @@
 
 ## 1. Toast System Fixes
 
-### 1.1 Duplicate "enhancement data could not be resolved" toast
+### ~~1.1 Duplicate "enhancement data could not be resolved" toast~~ ✅
 - **File**: `src/stores/heroStore.ts:770`
 - **Problem**: On build load, the warning toast "Some enhancement data could not be resolved" fires twice. The `resolve_boost_keys` call in the load flow likely triggers the catch block multiple times, or the load function runs twice (e.g. initial mount + auto-load).
 - **Fix**: Investigate the load flow in `loadBuildFromFile` — check if the resolve step runs in two passes (once for the initial load, once for the IO fallback icon pass at lines 740-766). Deduplicate so only one toast fires if there are unresolved keys.
 
-### 1.2 Toast not scaling with UI zoom
+### ~~1.2 Toast not scaling with UI zoom~~ ✅
 - **File**: `src/App.tsx:33` — `<Toaster position="bottom-right" theme="dark" richColors />`
 - **Problem**: The app uses root `font-size` scaling (via `heroplanner-zoom` localStorage key) for zoom. The Sonner `<Toaster>` component renders in a portal and may not inherit the root font-size, so toasts appear at the default size regardless of zoom level.
 - **Fix**: Check if Sonner's toaster portal inherits root `font-size`. If not, pass a custom `style` or `className` prop to the `<Toaster>` component that applies the current zoom factor. Alternatively, wrap the toast container in a div that inherits the root font-size.
@@ -74,7 +74,7 @@
 
 ## 3. General UI
 
-### 3.1 Decorative divider below header
+### ~~3.1 Decorative divider below header~~ ✅
 - **File**: `src/App.tsx` or `src/components/planner/Header.tsx`
 - **Description**: Add a horizontal gradient bar beneath the "Hero Planner" header, similar to the decorative line in the CoH in-game UI. A thin gradient line (e.g. 2-3px) transitioning from transparent → blue/gold → transparent, creating a visual separation between the header and the main panel area.
 - **Implementation**: A simple `<div>` with a CSS gradient background, placed between the `<Header />` and the `<ResizablePanelGroup>` in App.tsx.
@@ -144,7 +144,7 @@
 
 ## 5. Save/Load Functions
 
-### 5.1 Clear current build button
+### ~~5.1 Clear current build button~~ ✅
 - **File**: `src/components/planner/Header.tsx` (add button near existing Save/Load buttons)
 - **Behavior**: Resets the current build to a blank state — clears all selected powers, enhancement slots, hero name, and optionally archetype/powerset selections.
 - **Store action**: Add a `clearBuild()` action to `heroStore.ts` that resets `levelToPower`, `powerNameToLevel`, `totalSlotsAdded`, `heroName`, `isDirty`, and optionally `selectedPrimary`/`selectedSecondary`/pools.
@@ -208,20 +208,20 @@
 
 ## 7. Right Panel — Placeholder Tabs
 
-### 7.1 Inherents tab
+### ~~7.1 Inherents tab~~ ✅
 - **File**: `src/components/planner/RightPanel.tsx:39-42` (currently "Coming soon" placeholder)
 - **Description**: Show the selected archetype's inherent powers (e.g. Scrapper's Critical Hits, Tanker's Gauntlet, Dominator's Domination).
 - **Data**: Inherent powers are in the database as powers belonging to inherent powersets. Need to identify which powerset category contains inherents for each AT.
 - **Display**: List inherent powers with icons, names, and descriptions. These are informational only (not slottable in most cases).
 
-### 7.2 Incarnates tab
+### ~~7.2 Incarnates tab~~ ✅ (placeholder)
 - **File**: `src/components/planner/RightPanel.tsx:44-48` (currently "Coming soon" placeholder)
 - **Description**: The incarnate system — 6 slots (Alpha, Judgement, Interface, Lore, Destiny, Hybrid) for endgame characters.
 - **Features**: Select incarnate abilities for each slot, show their effects, factor Alpha slot's global boost into total stats calculation.
 - **Data**: Incarnate data needs to be identified in the game data zip and migrated to SQLite.
 - **Priority**: Medium — endgame feature, less critical for basic build planning.
 
-### 7.3 Accolades tab
+### ~~7.3 Accolades tab~~ ✅ (placeholder)
 - **File**: `src/components/planner/RightPanel.tsx:50-54` (currently "Coming soon" placeholder)
 - **Description**: Accolade powers that grant passive bonuses (e.g. Atlas Medallion: +Max HP/End).
 - **Features**: Toggle accolades on/off, include their effects in total stats calculation.
@@ -231,7 +231,7 @@
 
 ## 8. Misc UI
 
-### 8.1 Donate button
+### ~~8.1 Donate button~~ ✅
 - **File**: `src/components/planner/Header.tsx` or `src/components/planner/Settings.tsx`
 - **Description**: A small icon button (e.g. heart icon from lucide-react) that opens an external donation page in the user's default browser.
 - **Implementation**: Use Tauri's `shell.open()` to open the URL in the default browser (not an in-app webview). Place it in the header or settings popover.
