@@ -24,7 +24,7 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
   if (isEmpty) {
     return (
       <button
-        className="w-[2.25rem] h-[2.25rem] rounded-full bg-coh-dark/80 border border-border/20 shadow-[inset_0_0.125rem_0.25rem_rgba(0,0,0,0.5)] hover:border-coh-info/40 hover:bg-coh-dark/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="w-[2.5rem] h-[2.5rem] rounded-full bg-coh-dark/80 border border-border/20 shadow-[inset_0_0.125rem_0.25rem_rgba(0,0,0,0.5)] hover:border-coh-info/40 hover:bg-coh-dark/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         onClick={onAllocate}
         disabled={!canAllocate}
         title="Click to allocate slot"
@@ -40,14 +40,14 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
 
   const slotButton = boost?.icon ? (
     <button
-      className="relative w-[2.25rem] h-[2.25rem] flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
+      className="relative w-[2.5rem] h-[2.5rem] flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
     >
-      <img src={imageUrl(boost.icon)} alt={boost.computedName ?? ''} className="w-[2.25rem] h-[2.25rem]" />
+      <img src={imageUrl(boost.icon)} alt={boost.computedName ?? ''} className="w-[2.5rem] h-[2.5rem]" />
       {levelBadge}
     </button>
   ) : (
     <button
-      className="w-[2.25rem] h-[2.25rem] rounded-full flex items-center justify-center transition-colors cursor-pointer bg-coh-dark border-2 border-coh-gradient1/40 shadow-[inset_0_0.125rem_0.375rem_rgba(0,0,0,0.7)] hover:border-coh-gradient1/70 hover:shadow-[inset_0_0.125rem_0.375rem_rgba(0,0,0,0.7),0_0_0.375rem_rgba(59,130,246,0.2)]"
+      className="w-[2.5rem] h-[2.5rem] rounded-full flex items-center justify-center transition-colors cursor-pointer bg-coh-dark border-2 border-coh-gradient1/40 shadow-[inset_0_0.125rem_0.375rem_rgba(0,0,0,0.7)] hover:border-coh-gradient1/70 hover:shadow-[inset_0_0.125rem_0.375rem_rgba(0,0,0,0.7),0_0_0.375rem_rgba(59,130,246,0.2)]"
     />
   );
 
