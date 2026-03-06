@@ -1,6 +1,5 @@
 import { useHeroStore } from '@/stores/heroStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HeroInfo } from './HeroInfo';
 import { PowerSetSelector } from './PowerSetSelector';
@@ -19,15 +18,34 @@ export function LeftPanel() {
   const pool4Powers = useHeroStore((s) => s.pool4Powers);
 
   return (
-    <div className="h-full flex flex-col bg-coh-dark/30">
+    <div className="h-full flex flex-col bg-gradient-to-b from-coh-dark/50 via-coh-dark/30 to-coh-dark/50 border-r border-coh-secondary/30 shadow-[inset_-0.0625rem_0_0_rgba(53,123,215,0.08),0.125rem_0_0.5rem_rgba(0,0,0,0.3)]">
       <HeroInfo />
-      <Separator />
       <Tabs defaultValue="powersets" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-3 mt-2 bg-coh-dark">
-          <TabsTrigger value="powersets">Power Sets</TabsTrigger>
-          <TabsTrigger value="totalstats">Total Stats</TabsTrigger>
-          <TabsTrigger value="setbonuses">Set Bonuses</TabsTrigger>
-        </TabsList>
+        {/* Tab bar with bottom border and active tab break-through effect */}
+        <div className="relative mx-3 mt-2">
+          <TabsList className="relative z-10 bg-coh-dark/60 border border-coh-secondary/30 shadow-[0_0.0625rem_0.25rem_rgba(0,0,0,0.2)]">
+            <TabsTrigger
+              value="powersets"
+              className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
+            >
+              Power Sets
+            </TabsTrigger>
+            <TabsTrigger
+              value="totalstats"
+              className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
+            >
+              Total Stats
+            </TabsTrigger>
+            <TabsTrigger
+              value="setbonuses"
+              className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
+            >
+              Set Bonuses
+            </TabsTrigger>
+          </TabsList>
+          {/* Divider line below tabs */}
+          <div className="h-[0.0625rem] bg-gradient-to-r from-transparent via-coh-secondary/40 to-transparent mt-1" />
+        </div>
 
         <TabsContent value="powersets" className="flex-1 min-h-0">
           <ScrollArea className="h-full">
@@ -44,6 +62,10 @@ export function LeftPanel() {
                 powers={secondaryPowers}
                 slot="secondary"
               />
+              {/* Divider between main sets and pools */}
+              <div className="py-1">
+                <div className="h-[0.0625rem] bg-gradient-to-r from-transparent via-coh-secondary/30 to-transparent" />
+              </div>
               <PowerSetSelector
                 label="Power Pool 1"
                 choices={powerPoolChoices}

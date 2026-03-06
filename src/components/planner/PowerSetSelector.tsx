@@ -20,14 +20,16 @@ export function PowerSetSelector({ label, choices, powers, slot }: PowerSetSelec
 
   return (
     <div className="mb-3">
-      <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
+      <label className="text-[0.6875rem] font-medium text-coh-gradient4/70 mb-1 block uppercase tracking-wider">
+        {label}
+      </label>
       <Select
         onValueChange={(name) => {
           const ps = choices.find((c) => c.powerset_name === name);
           if (ps) selectPowerset(slot, ps);
         }}
       >
-        <SelectTrigger className="mb-1">
+        <SelectTrigger className="mb-1 bg-coh-dark/80 border-coh-secondary/60 hover:border-coh-gradient1/60 hover:shadow-[0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200">
           <SelectValue placeholder={`Select ${label}`} />
         </SelectTrigger>
         <SelectContent>
@@ -40,7 +42,7 @@ export function PowerSetSelector({ label, choices, powers, slot }: PowerSetSelec
       </Select>
 
       {powers.length > 0 && (
-        <ScrollArea className="h-48 rounded border border-border">
+        <ScrollArea className="h-48 rounded-md border border-coh-secondary/40 bg-coh-dark/40 shadow-[inset_0_0.25rem_0.375rem_rgba(0,0,0,0.3),inset_0_-0.25rem_0.375rem_rgba(0,0,0,0.15)]">
           <div className="p-1">
             {powers.map((power) => {
               const isSelected = power.full_name in powerNameToLevel;
@@ -49,24 +51,42 @@ export function PowerSetSelector({ label, choices, powers, slot }: PowerSetSelec
                   key={power.full_name}
                   onClick={() => togglePower(power)}
                   className={cn(
-                    'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-coh-secondary/50',
-                    isSelected && 'bg-coh-gradient2 text-white'
+                    'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-all duration-150',
+                    isSelected
+                      ? 'bg-gradient-to-r from-coh-gradient1/30 via-coh-gradient2/50 to-coh-gradient2/30 text-white border border-coh-gradient1/30 shadow-[0_0_0.25rem_rgba(53,123,215,0.15)]'
+                      : 'hover:bg-coh-secondary/40 hover:shadow-[0_0_0.25rem_rgba(53,123,215,0.1)] border border-transparent'
                   )}
                 >
                   <PowerHoverCard powerFullName={power.full_name} side="right">
                     <div className="flex items-center gap-2 min-w-0 cursor-help">
-                      <img src={imageUrl(power.icon)} alt="" className="w-5 h-5 shrink-0" />
+                      <img
+                        src={imageUrl(power.icon)}
+                        alt=""
+                        className={cn(
+                          'w-6 h-6 shrink-0 rounded-sm transition-all duration-150',
+                          isSelected
+                            ? 'ring-1 ring-coh-gradient1/50 shadow-[0_0_0.25rem_rgba(53,123,215,0.3)]'
+                            : 'opacity-80'
+                        )}
+                        draggable={false}
+                      />
                       <div className="min-w-0">
                         <div className="truncate">{power.display_name}</div>
                         {power.display_short_help && (
-                          <div className="text-xs text-muted-foreground truncate">
+                          <div className={cn(
+                            'text-[0.6875rem] truncate',
+                            isSelected ? 'text-coh-info/80' : 'text-muted-foreground'
+                          )}>
                             {power.display_short_help}
                           </div>
                         )}
                       </div>
                     </div>
                   </PowerHoverCard>
-                  <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                  <span className={cn(
+                    'ml-auto text-[0.6875rem] shrink-0 font-medium',
+                    isSelected ? 'text-coh-gradient4/70' : 'text-muted-foreground'
+                  )}>
                     Lv{power.available_level}
                   </span>
                 </button>

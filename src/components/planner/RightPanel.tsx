@@ -26,8 +26,8 @@ export function RightPanel() {
         </div>
 
         <TabsContent value="powers" className="flex-1 min-h-0">
-          <ScrollArea className="h-full">
-            <div className="p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <ScrollArea className="h-full @container">
+            <div className="p-3 grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 @xl:grid-cols-4 gap-4">
               {LEVEL_SLOTS.map((level) => (
                 <PowerSlotCard
                   key={level}
