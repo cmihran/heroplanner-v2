@@ -109,16 +109,18 @@ pub fn resolve_boost_keys(
 
     let mut results = Vec::with_capacity(boost_keys.len());
     for key in &boost_keys {
-        let result = stmt
-            .query_row([key], |row| {
-                Ok(ResolvedBoost {
-                    boost_key: row.get(0)?,
-                    computed_name: row.get(1)?,
-                    icon: row.get(2)?,
-                })
+        match stmt.query_row([key], |row| {
+            Ok(ResolvedBoost {
+                boost_key: row.get(0)?,
+                computed_name: row.get(1)?,
+                icon: row.get(2)?,
             })
-            .map_err(|e| format!("Boost not found '{}': {}", key, e))?;
-        results.push(result);
+        }) {
+            Ok(result) => results.push(result),
+            Err(_) => {
+                // Plain IO enhancements aren't in the boosts table — skip them
+            }
+        }
     }
 
     Ok(results)

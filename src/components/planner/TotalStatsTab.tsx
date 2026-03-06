@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronRight } from 'lucide-react';
 import type { CombinedStat, StatSource, TotalStatsResult } from '@/types/models';
 
-const CATEGORY_ORDER = ['Offense', 'Defense', 'Resistance', 'Damage', 'Movement', 'Status Resistance', 'Recovery', 'Misc'];
+const CATEGORY_ORDER = ['Offense', 'Defense', 'Resistance', 'Movement', 'Status Resistance', 'Recovery', 'Misc'];
 const VITAL_LABELS = new Set(['Max HP', 'Regeneration', 'Max End', 'Recovery', 'End Reduction']);
 
 function groupByCategory(stats: CombinedStat[]): Record<string, CombinedStat[]> {
@@ -118,7 +118,7 @@ function VitalBars({ result }: { result: TotalStatsResult }) {
         >
           <div className="relative bg-gradient-to-r from-emerald-900/50 via-emerald-800/30 to-emerald-950/40">
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/[0.03] to-transparent animate-pulse pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/[0.03] to-transparent pointer-events-none" />
 
             <div className="relative px-3 py-2">
               <div className="flex items-center justify-between">
@@ -169,7 +169,7 @@ function VitalBars({ result }: { result: TotalStatsResult }) {
         >
           <div className="relative bg-gradient-to-r from-blue-900/50 via-blue-800/30 to-blue-950/40">
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/[0.03] to-transparent animate-pulse pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/[0.03] to-transparent pointer-events-none" />
 
             <div className="relative px-3 py-2">
               <div className="flex items-center justify-between">
@@ -240,7 +240,39 @@ function VitalBars({ result }: { result: TotalStatsResult }) {
   );
 }
 
-function CategorySection({ category, entries }: { category: string; entries: CombinedStat[] }) {
+function DamageSubGroup({ entries }: { entries: CombinedStat[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Summary: show the max damage bonus across all types
+  const maxDmg = entries.reduce((max, e) => Math.max(max, Math.abs(e.totalValue)), 0);
+  const summaryDisplay = maxDmg === 0 ? '0%' : entries[0]?.totalValue === maxDmg && entries.every((e) => e.totalValue === maxDmg)
+    ? entries[0].displayValue
+    : `up to ${(maxDmg * 100).toFixed(maxDmg * 100 === Math.round(maxDmg * 100) ? 0 : 2)}%`;
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="relative w-full flex items-center justify-between text-[0.8125rem] py-1 px-1 rounded overflow-hidden hover:bg-white/5 cursor-pointer"
+      >
+        <span className="relative flex items-center gap-1.5 text-slate-300">
+          <ChevronRight className={`h-3 w-3 text-slate-500 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+          Damage
+        </span>
+        <span className="relative font-mono text-slate-100">{summaryDisplay}</span>
+      </button>
+      {expanded && (
+        <div className="ml-4">
+          {entries.map((stat) => (
+            <StatRow key={stat.label} stat={stat} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CategorySection({ category, entries, damageEntries }: { category: string; entries: CombinedStat[]; damageEntries?: CombinedStat[] }) {
   const [collapsed, setCollapsed] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const barColor = category === 'Defense' ? 'rgba(168,85,247,0.25)' : category === 'Resistance' ? 'rgba(236,72,153,0.25)' : undefined;
@@ -273,6 +305,9 @@ function CategorySection({ category, entries }: { category: string; entries: Com
           {visible.map((stat) => (
             <StatRow key={stat.label} stat={stat} barColor={barColor} />
           ))}
+          {damageEntries && damageEntries.length > 0 && (
+            <DamageSubGroup entries={damageEntries} />
+          )}
         </div>
       )}
     </div>
@@ -324,8 +359,8 @@ export function TotalStatsTab() {
 
   const grouped = groupByCategory(totalStatsResult.combinedStats);
   const allCategories = [
-    ...CATEGORY_ORDER.filter((c) => grouped[c]),
-    ...Object.keys(grouped).filter((c) => !CATEGORY_ORDER.includes(c)),
+    ...CATEGORY_ORDER.filter((c) => grouped[c] || (c === 'Offense' && grouped['Damage'])),
+    ...Object.keys(grouped).filter((c) => !CATEGORY_ORDER.includes(c) && c !== 'Damage'),
   ];
 
   return (
@@ -336,14 +371,15 @@ export function TotalStatsTab() {
 
         {/* Stat categories */}
         {allCategories.map((category) => {
-          let entries = grouped[category];
-          if (!entries || entries.length === 0) return null;
+          let entries = grouped[category] || [];
+          const damageEntries = category === 'Offense' ? grouped['Damage'] : undefined;
+          if (entries.length === 0 && !damageEntries?.length) return null;
           if (category === 'Recovery') {
             entries = entries.filter((s) => !VITAL_LABELS.has(s.label));
             if (entries.length === 0) return null;
           }
           return (
-            <CategorySection key={category} category={category} entries={entries} />
+            <CategorySection key={category} category={category} entries={entries} damageEntries={damageEntries} />
           );
         })}
       </div>

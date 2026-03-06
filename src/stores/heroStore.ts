@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { IO_ICONS } from '@/lib/enhancement-data';
 import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail, HeroBuildFile, TotalStatsResult, SlottedSetInfo } from '@/types/models';
 
 const LEVEL_SLOTS = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 47, 49];
@@ -81,6 +82,7 @@ interface HeroState {
   togglePower: (power: PowerSummary) => void;
   addSlot: (powerName: string) => void;
   removeSlot: (powerName: string) => void;
+  removeSlotAt: (powerName: string, slotIndex: number) => void;
   canAddMoreSlots: () => boolean;
   fetchPowerDetail: (powerFullName: string) => Promise<PowerDetail>;
   fetchBoostSetDetail: (setName: string) => Promise<BoostSetDetail>;
@@ -320,11 +322,39 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     if (level === undefined) return;
 
     const selected = state.levelToPower[level];
-    if (!selected || selected.numSlots <= 0) return;
+    if (!selected || selected.numSlots <= 1) return;
 
     // Clear boost in the removed slot
     const newBoosts = { ...selected.boosts };
     delete newBoosts[selected.numSlots - 1];
+
+    set({
+      levelToPower: {
+        ...state.levelToPower,
+        [level]: { ...selected, numSlots: selected.numSlots - 1, boosts: newBoosts },
+      },
+      totalSlotsAdded: state.totalSlotsAdded - 1,
+      isDirty: true,
+    });
+  },
+
+  removeSlotAt: (powerName, slotIndex) => {
+    const state = get();
+    const level = state.powerNameToLevel[powerName];
+    if (level === undefined) return;
+
+    const selected = state.levelToPower[level];
+    if (!selected || selected.numSlots <= 1) return;
+    if (slotIndex < 0 || slotIndex >= selected.numSlots) return;
+
+    // Shift boosts down to fill the gap
+    const newBoosts: Record<number, SlottedBoost> = {};
+    for (let i = 0; i < selected.numSlots - 1; i++) {
+      const srcIndex = i < slotIndex ? i : i + 1;
+      if (selected.boosts[srcIndex]) {
+        newBoosts[i] = selected.boosts[srcIndex];
+      }
+    }
 
     set({
       levelToPower: {
@@ -718,6 +748,17 @@ export const useHeroStore = create<HeroState>((set, get) => ({
                 computedName: info.computedName,
               };
               changed = true;
+            } else {
+              // Plain IO enhancements aren't in the DB — resolve from local map
+              const ioIcon = IO_ICONS[boost.boostKey];
+              if (ioIcon) {
+                updatedBoosts[Number(idx)] = {
+                  ...boost,
+                  icon: ioIcon,
+                  computedName: boost.boostKey,
+                };
+                changed = true;
+              }
             }
           }
           if (changed) {

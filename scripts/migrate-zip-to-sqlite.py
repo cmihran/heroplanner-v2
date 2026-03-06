@@ -103,7 +103,10 @@ def main():
     # 5. Boost sets + bonuses + individual boosts
     insert_boost_sets(conn, zf, zip_names)
 
-    # 6. Migration meta
+    # 6. Plain IO boosts (generic + dual-aspect, not part of any set)
+    insert_plain_io_boosts(conn, zf, zip_names)
+
+    # 7. Migration meta
     conn.execute(
         "INSERT INTO migration_meta (revision, source_file, entry_count, script_version) VALUES (?, ?, ?, ?)",
         (revision, os.path.basename(zip_path), len(zip_names), SCRIPT_VERSION),
@@ -499,6 +502,163 @@ def insert_boost_sets(conn, zf, zip_names):
             boost_count += 1
 
     print(f"  Boost sets: {set_count}, Bonuses: {bonus_count}, Boosts: {boost_count}")
+
+
+# Mapping from boosts_allowed type names (used as boostKey in save files)
+# to their corresponding generic_* power file names in the zip.
+BOOST_TYPE_TO_GENERIC = {
+    "Enhance Accuracy": "generic_accuracy",
+    "Enhance Damage": "generic_damage",
+    "Enhance Defense DeBuff": "generic_defense_debuff",
+    "Reduce Endurance Cost": "generic_endurance_discount",
+    "Enhance Recharge Speed": "generic_recharge",
+    "Enhance Threat Duration": "generic_taunt",
+    "Enhance KnockBack": "generic_knockback",
+    "Enhance Disorient": "generic_stun",
+    "Enhance Endurance Modification": "generic_drain_endurance",
+    "Enhance Heal": "generic_heal",
+    "Enhance Hold": "generic_hold",
+    "Enhance Confuse": "generic_confuse",
+    "Enhance Defense": "generic_defense_buff",
+    "Enhance Fear": "generic_fear",
+    "Enhance Flying Speed": "generic_fly",
+    "Enhance Immobilization": "generic_immobilize",
+    "Enhance Intangibility": "generic_intangible",
+    "Reduce Interrupt Time": "generic_interrupt",
+    "Enhance Jump": "generic_jump",
+    "Enhance Range": "generic_range",
+    "Enhance Damage Resistance": "generic_res_damage",
+    "Enhance Running Speed": "generic_run",
+    "Enhance Sleep": "generic_sleep",
+    "Enhance Slow Movement": "generic_snare",
+    "Enhance ToHit Buffs": "generic_tohit_buff",
+    "Enhance ToHit DeBuffs": "generic_tohit_debuff",
+}
+
+# IO icon filenames (same as frontend IO_ICONS mapping)
+IO_ICONS = {
+    "Enhance Accuracy": "IO_Accuracy.png",
+    "Enhance Damage": "IO_Damage.png",
+    "Enhance Defense DeBuff": "IO_Defense_DeBuff.png",
+    "Reduce Endurance Cost": "IO_Endurance_Reduction.png",
+    "Enhance Recharge Speed": "IO_Recharge_Reduction.png",
+    "Enhance Threat Duration": "IO_Taunt_and_Placate_Duration.png",
+    "Enhance KnockBack": "IO_Knockback_Distance.png",
+    "Enhance Disorient": "IO_Disorient_Duration.png",
+    "Enhance Endurance Modification": "IO_Endurance_Modification.png",
+    "Enhance Heal": "IO_Healing_and_Absorb.png",
+    "Enhance Hold": "IO_Hold_Duration.png",
+    "Enhance Confuse": "IO_Confusion_Duration.png",
+    "Enhance Defense": "IO_Defense_Buff.png",
+    "Enhance Fear": "IO_Fear_Duration.png",
+    "Enhance Flying Speed": "IO_Flight_Speed.png",
+    "Enhance Immobilization": "IO_Immobilization_Duration.png",
+    "Enhance Intangibility": "IO_Intangibility.png",
+    "Reduce Interrupt Time": "IO_Interrupt_Duration.png",
+    "Enhance Jump": "IO_Jumping.png",
+    "Enhance Range": "IO_Range_Increase.png",
+    "Enhance Damage Resistance": "IO_Resist_Damage.png",
+    "Enhance Running Speed": "IO_Run_Speed_Increase.png",
+    "Enhance Sleep": "IO_Sleep_Duration.png",
+    "Enhance Slow Movement": "IO_Slow.png",
+    "Enhance ToHit Buffs": "IO_To_Hit_Buff.png",
+    "Enhance ToHit DeBuffs": "IO_To_Hit_DeBuff.png",
+}
+
+
+def insert_plain_io_boosts(conn, zf, zip_names):
+    """Insert plain IO enhancements (generic + dual-aspect) into the boosts table.
+
+    These aren't part of any boost set but need to be in the DB for:
+    - Save/load icon resolution (boostKey matches the type name)
+    - Future enhancement scaling / ED calculations (raw_json has effect data)
+    """
+    count = 0
+
+    # 1. Load all powers/boosts/*/*.json files (excluding index.json)
+    #    and insert by their native name (e.g., "generic_accuracy", "dsync_damage_accuracy")
+    boost_power_files = sorted(
+        n for n in zip_names
+        if n.startswith("powers/boosts/") and n.endswith(".json")
+        and "index" not in n and n.count("/") == 3
+    )
+
+    for zip_entry in boost_power_files:
+        try:
+            data = load_json_from_zip(zf, zip_entry)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+
+        name = data.get("name", "")
+        if not name:
+            continue
+
+        # Extract aspects from effect templates
+        aspects = []
+        for eff in data.get("effects", []):
+            for tmpl in eff.get("templates", []):
+                for a in tmpl.get("attribs", []):
+                    if a not in aspects:
+                        aspects.append(a)
+
+        conn.execute(
+            """INSERT OR IGNORE INTO boosts
+               (boost_key, boost_set_id, computed_name, icon, boost_type,
+                is_proc, attuned, aspects_json, raw_json)
+               VALUES (?, NULL, ?, ?, ?, 0, 0, ?, ?)""",
+            (
+                name.lower(),
+                data.get("display_name", name),
+                data.get("icon"),
+                "PlainIO",
+                json.dumps(aspects),
+                json.dumps(data),
+            ),
+        )
+        if conn.execute("SELECT changes()").fetchone()[0] > 0:
+            count += 1
+
+    # 2. Insert alias records keyed by boosts_allowed type names
+    #    (e.g., "Enhance Accuracy") — these match what save files store as boostKey
+    alias_count = 0
+    for type_name, generic_name in BOOST_TYPE_TO_GENERIC.items():
+        # Read the generic file for its raw data
+        generic_path = f"powers/boosts/{generic_name}/{generic_name}.json"
+        raw_data = {}
+        if generic_path in zip_names:
+            try:
+                raw_data = load_json_from_zip(zf, generic_path)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                pass
+
+        aspects = []
+        for eff in raw_data.get("effects", []):
+            for tmpl in eff.get("templates", []):
+                for a in tmpl.get("attribs", []):
+                    if a not in aspects:
+                        aspects.append(a)
+
+        icon = IO_ICONS.get(type_name) or raw_data.get("icon")
+
+        conn.execute(
+            """INSERT OR IGNORE INTO boosts
+               (boost_key, boost_set_id, computed_name, icon, boost_type,
+                is_proc, attuned, aspects_json, raw_json)
+               VALUES (?, NULL, ?, ?, ?, 0, 0, ?, ?)""",
+            (
+                type_name,
+                type_name,
+                icon,
+                "PlainIO",
+                json.dumps(aspects),
+                json.dumps(raw_data),
+            ),
+        )
+        if conn.execute("SELECT changes()").fetchone()[0] > 0:
+            alias_count += 1
+
+    conn.commit()
+    print(f"  Plain IO boosts: {count} (by name), {alias_count} (by type alias)")
 
 
 def print_summary(conn, db_path, revision):
