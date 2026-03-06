@@ -298,3 +298,52 @@ Many powers have different effects in PvE and PvP contexts:
 - Effect groups can be tagged as PvE-only, PvP-only, or both
 - PvP has aggressive diminishing returns on attribute modifications (via arctangent functions controlled by DimA/DimB values)
 - Some attributes have different caps in PvP
+
+
+## Proc (PPM) System Overview
+
+Procs Per Minute (PPM) is the "average" number of times per minute an enhancement's special effect will attempt to fire. This mechanic is used by all enhancements with a chance to proc or not.
+
+Procs Per Minute are adjusted for the enhanced recharge + activation time of a power, not its final buffed number. So, recharge enhancements usually leave PPM unchanged from the proc's description. Recharge bonuses and buffs usually increase effective PPM above the proc's description. Adaptive recharge usually decreases effective PPM.
+
+Calculating Chance to Proc
+The current formulae used by the game:
+
+If power is a click: PPM × ((Enhanced Recharge Time + Time To Activate) / (60 × Area Factor))
+
+If power is not a click: PPM × ((Activate Period) / (60 × Area Factor))
+
+Note: For this calculation, "Enhanced Recharge Time" includes reductions from enhancements and Alpha slotting, but not from Luck of the Gambler bonuses, other enhancement set bonuses, Hasten, or other recharge buffs. Adaptive recharge does not increase the recharge time for the purpose of PPM calculation. The calculation uses activation time, not Arcanatime.
+
+When accounting for powers that potentially can effect multiple targets and the proc potentially hitting off each target, the game discounts the probability of proc-ing off any one target by an Area Factor. The current way to calculate this number:
+
+Single Target Area Factor = 1
+Sphere Area Factor = [1 + (0.15×Radius)] × 0.75 + 0.25
+Cone Area Factor = [1 + (0.15×Radius) − (0.011×Radius×(360−Arc)/30)] × 0.75 + 0.25
+Area Factor applies regardless of how many you actually hit. When using AoE and cones on single targets, proc performance will be significantly lower than with comparable single target powers.
+
+The final chance to proc is clamped between a minimum and a maximum.
+
+The minimum chance to proc is (PPM × 1.5%) + 5%.
+For example, a typical damage proc, with 3.5 PPM, has a minimum chance to proc of 10.25%. It will have at least a 10.25% chance to proc per target, even if the power has a large radius and short recharge.
+The maximum chance to proc is 90%.
+Procs that always happen, such as Kismet's to hit buff and Miracle's recovery buff, ignore this maximum, and proc 100% of the time.
+Maximum Proc Chance
+Single Target
+The formula for calculating the required enhanced recharge + activation time to achieve a 90% proc chance in a click power is 54/PPM.
+
+Example 1: For Decimation or Gaussian's build up proc with 1 PPM, 54/1=54 seconds. A single-target click power with an enhanced recharge + activation time of at least 54 seconds will have the maximum proc chance of 90%, even if the power's actual recharge is faster due to Hasten, set bonuses, etc.
+Example 2: For a typical damage proc with 3.5 PPM, 54/3.5≈15.43 seconds. A single-target click power with an enhanced recharge + activation time of at least 15.43 seconds will have the maximum proc chance of 90%.
+Note that non-click powers cannot change their "activate period", so their chance to fire will always be the same, even if the power can be slotted or buffed with recharge.
+
+1PPM	54 seconds	4PPM	13.5 seconds
+1.5PPM	36 seconds	4.5PPM	12 seconds
+2PPM	27 seconds	5PPM	10.8 seconds
+2.5PPM	21.6 seconds	6PPM	9 seconds
+3PPM	18 seconds	7PPM	7.71 seconds
+3.5PPM	15.43 seconds
+Cone/Area of Effect
+The formula for calculating the required recharge + activation time to achieve a 90% proc chance is (54 × Area Factor)/PPM, where Area Factor is [1 + (0.15×Radius) − (0.011×Radius×(360−Arc)/30)] × 0.75 + 0.25.[1] Note that when Arc is 360 degrees (which is true for any non-Cone AoE) the Area Factor simplifies to [1 + (0.15×Radius)] × 0.75 + 0.25.
+
+A refactored equation for the Area Factor which converts the decimal fractions into long-form with a single linear order of operations and no decimals is ((((Arc×11)+540)/40000)×Radius)+1. When Arc is 360 degrees, this equation simplifies to Radius×9/80+1.
+

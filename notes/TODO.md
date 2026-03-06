@@ -16,7 +16,7 @@
 
 ## 2. Enhancement System
 
-### 2.1 Drag-to-add/remove enhancement slots
+### ~~2.1 Drag-to-add/remove enhancement slots~~ ✅
 - **Files**: `src/components/planner/PowerSlotCard.tsx` (enhancement slot row, lines 116-141), `src/stores/heroStore.ts` (`addSlot`/`removeSlot` actions)
 - **Behavior**: When the user clicks and drags rightward along the enhancement slot bar on a PowerSlotCard, automatically add enhancement slots one-by-one as the mouse moves right. Dragging leftward removes slots. This is a mouse gesture shortcut alternative to clicking the ghost "+" button.
 - **Implementation notes**:
@@ -28,7 +28,7 @@
   - Provide visual feedback (highlight the zone where the next slot would appear)
   - Must not conflict with the existing click-to-open EnhancementPicker popover on individual slots
 
-### 2.2 Slightly larger enhancement icons
+### ~~2.2 Slightly larger enhancement icons~~ ✅
 - **Files**: `src/components/planner/EnhancementSlot.tsx`, `src/components/planner/PowerSlotCard.tsx`
 - **Current size**: Enhancement slots are `w-[2.25rem] h-[2.25rem]` (lines 27, 37, 39 in EnhancementSlot.tsx)
 - **Change**: Increase to approximately `w-[2.5rem] h-[2.5rem]` or `w-[2.75rem] h-[2.75rem]`. Adjust the ghost add button, remove button positioning, and slot container padding/margins to match.
@@ -79,7 +79,7 @@
 - **Description**: Add a horizontal gradient bar beneath the "Hero Planner" header, similar to the decorative line in the CoH in-game UI. A thin gradient line (e.g. 2-3px) transitioning from transparent → blue/gold → transparent, creating a visual separation between the header and the main panel area.
 - **Implementation**: A simple `<div>` with a CSS gradient background, placed between the `<Header />` and the `<ResizablePanelGroup>` in App.tsx.
 
-### 3.2 Left panel redesign — CoH in-game style
+### ~~3.2 Left panel redesign — CoH in-game style~~ ✅
 - **Files**: `src/components/planner/LeftPanel.tsx`, `src/components/planner/PowerSetSelector.tsx`, `src/components/planner/HeroInfo.tsx`
 - **Direction**: Redesign the left panel to match the City of Heroes in-game UI aesthetic:
   - Dark panel backgrounds with subtle beveled/raised edges
@@ -90,7 +90,7 @@
   - Consider adding powerset icons next to the powerset names in the dropdown
 - **Note**: The PowerSlotCard has already been redesigned to the in-game pill shape. The left panel should follow the same design language.
 
-### 3.3 Responsive power card grid
+### ~~3.3 Responsive power card grid~~ ✅
 - **File**: `src/components/planner/RightPanel.tsx:27`
 - **Current**: `grid-cols-1 md:grid-cols-2 xl:grid-cols-3`
 - **Problem**: At narrow window widths, the cards may be too wide or too narrow. The grid should respond to the actual panel width (which is resizable), not just the viewport width.
@@ -100,15 +100,15 @@
 
 ## 4. Total Stats Improvements
 
-### 4.1 Vital bar animations
+### ~~4.1 Vital bar animations~~ ✅
 - **File**: `src/components/planner/TotalStatsTab.tsx` (VitalBars component, lines 95-241)
 - **Description**: Add subtle animations to the HP and Endurance bars to make them feel alive, similar to in-game vitals:
-  - A slow shimmer/pulse effect on the bar fill (already has a basic `animate-pulse` on a transparent overlay at line 121, but it could be more pronounced)
+  - A slow shimmer/pulse effect on the bar fill (already has a basic `animate-pulse` on a transparent overlay at line 121, but it could be more pronounced). Add setting in settings window to toggle this on and off.
   - Smooth transition animation when HP/End values change (e.g. when toggling powers on/off)
   - Optional: a subtle "heartbeat" pulse on the HP bar value text
 - **Implementation**: CSS animations via Tailwind's `@keyframes` in `globals.css` or inline styles. Keep it subtle — the bars should feel alive but not distracting.
 
-### 4.2 Defense soft cap indicator
+### ~~4.2 Defense soft cap indicator~~ ✅
 - **Description**: The defense soft cap in CoH is 45% (floor hit chance of 5%). Defense bars should visually indicate this cap.
 - **File**: `src/components/planner/TotalStatsTab.tsx` (StatRow component, line 37: `barPct` calculation)
 - **Current**: The bar fills based on `totalValue * 100`, capped at 100% visually.
@@ -132,7 +132,7 @@
 - **Problem**: Run Speed shows up as a stat but doesn't have source attribution (can't expand to see which powers contribute).
 - **Investigation**: The categorization exists, so the issue might be that movement powers use a different attrib name, target type, or aspect that gets filtered out. Check if movement effects have `target != "Self"` (line 249 in calc.rs filters to Self-only). Sprint, Super Speed, etc. might target differently. Also check if the attrib name in the data matches `RunningSpeed` exactly.
 
-### 4.5 Sort out Misc stats
+### ~~4.5 Sort out Misc stats~~ ✅
 - **Description**: The Misc category is a catch-all for uncategorized stats. Clean it up:
   - **Other stats**: Review what falls into `("Misc", "Other")` (the default case at utils.rs:166). Add proper categorization for common attribs that currently land here.
   - **Repel stats**: Currently mapped to `("Misc", "Repel")`. Consider whether this belongs under a different category or needs a better label.

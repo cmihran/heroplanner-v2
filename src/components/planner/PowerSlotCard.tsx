@@ -28,28 +28,36 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
   } | null>(null);
 
   const handleSlotDragMouseDown = useCallback((e: MouseEvent<HTMLDivElement>) => {
-    // Only trigger on the container itself, not child elements (slot buttons, etc.)
-    if (e.target !== e.currentTarget) return;
     // Only left mouse button
     if (e.button !== 0) return;
     if (!selectedPower) return;
 
     const { numSlots } = selectedPower;
+    const startX = e.clientX;
+    let activated = false;
 
     slotDragRef.current = {
-      startX: e.clientX,
+      startX,
       startSlots: numSlots,
       lastThresholdSlots: numSlots,
     };
-    setSlotDragging(true);
 
     const SLOT_WIDTH_PX = 44; // ~2.75rem at 16px base, approximate threshold
+    const DRAG_THRESHOLD = 8;  // px before we consider it a drag (not a click)
 
     const handleMouseMove = (ev: globalThis.MouseEvent) => {
       const ref = slotDragRef.current;
       if (!ref || !selectedPower) return;
 
       const deltaX = ev.clientX - ref.startX;
+
+      // Don't activate until the mouse has moved enough to distinguish from a click
+      if (!activated) {
+        if (Math.abs(deltaX) < DRAG_THRESHOLD) return;
+        activated = true;
+        setSlotDragging(true);
+      }
+
       // Compute how many slots to change based on distance from start
       const slotDelta = Math.round(deltaX / SLOT_WIDTH_PX);
       const targetSlots = ref.startSlots + slotDelta;
@@ -124,12 +132,13 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
 
   if (!selectedPower) {
     return (
-      <div
-        className={`ml-4 rounded-full border border-border/30 bg-coh-dark/50 pl-8 pr-3 pt-1 pb-2 transition-colors ${dragOver ? 'border-coh-primary/70 bg-coh-primary/10' : ''}`}
-        {...dragProps}
-      >
-        <p className="text-sm text-muted-foreground">Level {level} — Empty</p>
-        <p className="text-[0.625rem] leading-tight min-h-[2.5em]">&nbsp;</p>
+      <div className="ml-4" {...dragProps}>
+        <div className={`rounded-full border bg-gradient-to-r from-coh-dark/60 to-coh-dark/30 pl-5 pr-4 flex items-center transition-colors min-h-[3.5rem] ${dragOver ? 'border-coh-gradient1/50 bg-coh-gradient1/5' : 'border-coh-secondary/20'}`}>
+          <div>
+            <p className="text-sm text-muted-foreground/50">Level {level}</p>
+            <p className="text-[0.625rem] leading-tight text-muted-foreground/30">Empty slot</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -142,15 +151,17 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
   return (
     <div
       className={`group transition-colors ${!isActive && showToggle ? 'opacity-50 saturate-50' : ''}`}
-      draggable
-      onDragStart={handleDragStart}
       {...dragProps}
     >
-      {/* Power info bar — pill shape with protruding icon */}
-      <div className="relative ml-4">
+      {/* Power info bar — pill shape with protruding icon, draggable for reordering */}
+      <div
+        className="relative ml-4"
+        draggable
+        onDragStart={handleDragStart}
+      >
         {/* Pill bar */}
-        <div className={`rounded-full border bg-gradient-to-r from-coh-gradient2/80 to-coh-gradient2/40 ${dragOver ? 'border-coh-primary/70 bg-coh-primary/10' : 'border-coh-secondary/50'}`}>
-          <div className="flex items-center gap-2 pl-8 pr-3 pt-1 pb-2 bg-gradient-to-b from-white/8 via-transparent to-black/25 rounded-full">
+        <div className={`rounded-full border bg-gradient-to-r from-coh-gradient2/90 via-coh-gradient2/60 to-coh-gradient2/40 shadow-[0_0.125rem_0.25rem_rgba(0,0,0,0.3)] ${dragOver ? 'border-coh-gradient1/60 shadow-[0_0_0.5rem_rgba(53,123,215,0.2)]' : 'border-coh-secondary/50'}`}>
+          <div className="flex items-center gap-2 pl-8 pr-3 pt-1 pb-2 bg-gradient-to-b from-white/10 via-transparent to-black/30 rounded-full">
             <PowerHoverCard powerFullName={power.full_name}>
               <div className="min-w-0 flex-1 cursor-help">
                 <div className="flex items-center gap-1.5">
@@ -163,10 +174,10 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
             {showToggle && (
               <button
                 onClick={(e) => { e.stopPropagation(); togglePowerActive(power.full_name); }}
-                className={`ml-auto w-5 h-5 rounded-full shrink-0 border flex items-center justify-center transition-all ${
+                className={`ml-auto w-5 h-5 rounded-full shrink-0 border flex items-center justify-center transition-all duration-200 ${
                   isActive
-                    ? 'bg-green-600 border-green-400 shadow-[0_0_0.375rem_rgba(34,197,94,0.4)]'
-                    : 'bg-muted border-muted-foreground/40'
+                    ? 'bg-green-600 border-green-400 shadow-[0_0_0.375rem_rgba(34,197,94,0.4),inset_0_0.0625rem_0_rgba(255,255,255,0.2)]'
+                    : 'bg-coh-dark/60 border-coh-secondary/40 shadow-[inset_0_0.0625rem_0.125rem_rgba(0,0,0,0.3)]'
                 }`}
                 title={isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'}
               >
@@ -181,14 +192,14 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
           src={imageUrl(power.icon)}
           alt=""
           draggable={false}
-          className="absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full cursor-grab ring-2 ring-coh-secondary/60 shadow-[0_0_0.375rem_rgba(0,0,0,0.6)]"
+          className="absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full cursor-grab ring-2 ring-coh-gradient1/40 shadow-[0_0_0.5rem_rgba(0,0,0,0.6),0_0_0.75rem_rgba(53,123,215,0.15)]"
         />
       </div>
 
       {/* Enhancement slots — overlapping bottom of pill */}
       {hasSlots && (
         <div
-          className={`flex items-center gap-1 ml-4 pl-7 -mt-2 relative z-10 pr-2 ${slotDragging ? 'cursor-ew-resize' : 'cursor-default'}`}
+          className={`flex items-center gap-1 ml-4 pl-7 -mt-2 relative z-10 pr-2 py-0.5 ${slotDragging ? 'cursor-ew-resize' : 'cursor-default'}`}
           onMouseDown={handleSlotDragMouseDown}
         >
           {/* Allocated slots */}
