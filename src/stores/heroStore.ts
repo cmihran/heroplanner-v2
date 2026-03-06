@@ -91,6 +91,7 @@ interface HeroState {
   swapPowerLevels: (fromLevel: number, toLevel: number) => void;
   togglePowerActive: (powerName: string) => void;
   refreshTotalStats: () => Promise<void>;
+  clearBuild: () => void;
   saveBuild: () => Promise<void>;
   saveAsNewBuild: () => Promise<void>;
   loadBuild: () => Promise<void>;
@@ -530,6 +531,17 @@ export const useHeroStore = create<HeroState>((set, get) => ({
       console.error('Failed to calculate total stats:', err);
       set({ totalStatsLoading: false });
     }
+  },
+
+  clearBuild: () => {
+    set({
+      levelToPower: initLevelMap(),
+      powerNameToLevel: {},
+      totalSlotsAdded: 0,
+      heroName: '',
+      isDirty: false,
+      totalStatsResult: null,
+    });
   },
 
   saveBuild: async () => {
