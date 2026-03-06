@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { IO_ICONS } from '@/lib/enhancement-data';
+import { confirm } from '@/components/planner/ConfirmDialog';
 import type { Archetype, Origin, PowersetCategory, PowerSummary, PowersetWithPowers, PowerDetail, SlottedBoost, BoostSetDetail, HeroBuildFile, TotalStatsResult, SlottedSetInfo, PowerSlottedEnhancements } from '@/types/models';
 
 const LEVEL_SLOTS = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 47, 49];
@@ -175,6 +176,13 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   },
 
   selectArchetype: async (archetype) => {
+    // Confirm if build has powers
+    const hasPowers = Object.values(get().levelToPower).some((sp) => sp !== null);
+    if (hasPowers) {
+      const ok = await confirm('Change Archetype', 'Changing archetype will clear your current build. Continue?', 'Change');
+      if (!ok) return;
+    }
+
     // Reset everything when archetype changes
     set({
       archetype,

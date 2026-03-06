@@ -2,6 +2,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { Minus, Square, X, Save, FilePlus2, FolderOpen, Trash2, Heart } from 'lucide-react';
 import { Settings } from './Settings';
+import { confirm } from './ConfirmDialog';
 import { useHeroStore } from '@/stores/heroStore';
 
 const appWindow = getCurrentWindow();
@@ -15,6 +16,19 @@ export function Header() {
   const saveAsNewBuild = useHeroStore((s) => s.saveAsNewBuild);
   const loadBuild = useHeroStore((s) => s.loadBuild);
   const clearBuild = useHeroStore((s) => s.clearBuild);
+
+  const handleClear = async () => {
+    const ok = await confirm('Clear Build', 'This will remove all powers and enhancements. Are you sure?', 'Clear');
+    if (ok) clearBuild();
+  };
+
+  const handleLoad = async () => {
+    if (isDirty) {
+      const ok = await confirm('Unsaved Changes', 'You have unsaved changes that will be lost. Continue loading?', 'Load');
+      if (!ok) return;
+    }
+    loadBuild();
+  };
 
   const openDonate = async () => {
     try {
@@ -58,14 +72,14 @@ export function Header() {
         </button>
         <button
           className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          onClick={() => loadBuild()}
+          onClick={handleLoad}
           title="Load Build"
         >
           <FolderOpen className="h-4 w-4" />
         </button>
         <button
           className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-red-400 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          onClick={() => clearBuild()}
+          onClick={handleClear}
           disabled={!archetype}
           title="Clear Build"
         >

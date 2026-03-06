@@ -5,6 +5,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { Header } from '@/components/planner/Header';
 import { LeftPanel } from '@/components/planner/LeftPanel';
 import { RightPanel } from '@/components/planner/RightPanel';
+import { ConfirmDialog } from '@/components/planner/ConfirmDialog';
 import { useHeroStore } from '@/stores/heroStore';
 
 const appWindow = getCurrentWindow();
@@ -30,6 +31,7 @@ function App() {
 
   return (
     <div className="relative h-screen flex flex-col bg-coh-primary text-foreground overflow-hidden rounded-lg border border-coh-secondary">
+      <ConfirmDialog />
       <Toaster
         position="bottom-right"
         theme="dark"
