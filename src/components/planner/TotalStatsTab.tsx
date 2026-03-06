@@ -32,7 +32,7 @@ function groupByCategory(stats: CombinedStat[]): Record<string, CombinedStat[]> 
 
 function StatRow({ stat, barColor, cap }: { stat: CombinedStat; barColor?: string; cap?: StatCap }) {
   const [expanded, setExpanded] = useState(false);
-  const hasSources = stat.sources.length > 1;
+  const hasSources = stat.sources.length > 0;
   // For bar: scale so the cap = 100% of bar width (or 100% if no cap)
   const barMax = cap ? cap.capValue : 1;
   const barPct = barColor ? Math.min((Math.abs(stat.totalValue) / barMax) * 100, 100) : 0;
