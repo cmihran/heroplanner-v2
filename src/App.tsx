@@ -30,7 +30,15 @@ function App() {
 
   return (
     <div className="relative h-screen flex flex-col bg-coh-primary text-foreground overflow-hidden rounded-lg border border-coh-secondary">
-      <Toaster position="bottom-right" theme="dark" richColors />
+      <Toaster
+        position="bottom-right"
+        theme="dark"
+        richColors
+        style={{ fontSize: 'inherit' }}
+        toastOptions={{
+          style: { fontSize: '0.875rem' },
+        }}
+      />
       {edges.map(({ dir, style }) => (
         <div
           key={dir}

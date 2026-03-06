@@ -767,7 +767,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
         }
         set({ levelToPower: updatedLevelToPower });
       } catch {
-        toast.warning('Some enhancement data could not be resolved');
+        toast.warning('Some enhancement data could not be resolved', { id: 'boost-resolve-warning' });
       }
     }
 
