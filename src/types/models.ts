@@ -128,6 +128,23 @@ export interface BoostSetBonus {
   is_pvp_bonus: boolean;
 }
 
+// --- Inherent Powers ---
+
+export interface InherentPowerInfo {
+  fullName: string;
+  displayName: string;
+  displayHelp: string | null;
+  displayShortHelp: string | null;
+  icon: string;
+  powerType: string;
+}
+
+export interface InherentPowersResult {
+  atInherent: InherentPowerInfo | null;
+  corePowers: InherentPowerInfo[];
+  fitnessPowers: InherentPowerInfo[];
+}
+
 // --- Save/Load build types ---
 
 export interface HeroBuildFile {

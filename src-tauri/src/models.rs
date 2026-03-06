@@ -202,6 +202,27 @@ pub struct TotalStatsResult {
     pub end_per_sec: f64,
 }
 
+// --- Inherent Powers ---
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct InherentPowerInfo {
+    pub full_name: String,
+    pub display_name: String,
+    pub display_help: Option<String>,
+    pub display_short_help: Option<String>,
+    pub icon: String,
+    pub power_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct InherentPowersResult {
+    pub at_inherent: Option<InherentPowerInfo>,
+    pub core_powers: Vec<InherentPowerInfo>,
+    pub fitness_powers: Vec<InherentPowerInfo>,
+}
+
 // --- Save/Load build file structs ---
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
