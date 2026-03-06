@@ -551,9 +551,9 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     const powers = Object.values(state.levelToPower)
       .filter((sp): sp is SelectedPower => sp !== null)
       .map((sp) => {
-        const boosts: Record<string, { boostKey: string; setName: string | null }> = {};
+        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
         for (const [idx, b] of Object.entries(sp.boosts)) {
-          boosts[idx] = { boostKey: b.boostKey, setName: b.setName };
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
         }
         return {
           level: sp.level,
@@ -603,9 +603,9 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     const powers = Object.values(state.levelToPower)
       .filter((sp): sp is SelectedPower => sp !== null)
       .map((sp) => {
-        const boosts: Record<string, { boostKey: string; setName: string | null }> = {};
+        const boosts: Record<string, { boostKey: string; setName: string | null; level: number | null; isAttuned: boolean }> = {};
         for (const [idx, b] of Object.entries(sp.boosts)) {
-          boosts[idx] = { boostKey: b.boostKey, setName: b.setName };
+          boosts[idx] = { boostKey: b.boostKey, setName: b.setName, level: b.level, isAttuned: b.isAttuned };
         }
         return {
           level: sp.level,
@@ -706,6 +706,8 @@ export const useHeroStore = create<HeroState>((set, get) => ({
           icon: null,
           computedName: null,
           setName: saved.setName,
+          level: saved.level ?? null,
+          isAttuned: saved.isAttuned ?? false,
         };
       }
 

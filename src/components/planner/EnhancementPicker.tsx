@@ -37,6 +37,8 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect }: Enhanc
       icon,
       computedName: boostName,
       setName: null,
+      level: 50,
+      isAttuned: false,
     });
     onSelect();
   };
@@ -44,6 +46,21 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect }: Enhanc
   const handleClear = () => {
     removeBoostFromSlot(powerFullName, slotIndex);
     onSelect();
+  };
+
+  const handleLevelChange = (newLevel: number) => {
+    if (!currentBoost) return;
+    setBoostInSlot(powerFullName, slotIndex, { ...currentBoost, level: newLevel, isAttuned: false });
+  };
+
+  const handleAttunedToggle = () => {
+    if (!currentBoost) return;
+    const nowAttuned = !currentBoost.isAttuned;
+    setBoostInSlot(powerFullName, slotIndex, {
+      ...currentBoost,
+      isAttuned: nowAttuned,
+      level: nowAttuned ? null : 50,
+    });
   };
 
   if (!detail) {
@@ -60,6 +77,32 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect }: Enhanc
           </Button>
         )}
       </div>
+      {currentBoost && (
+        <div className="px-3 pb-2 flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <label className="text-[0.625rem] text-muted-foreground">Lv</label>
+            <input
+              type="number"
+              min={1}
+              max={50}
+              value={currentBoost.isAttuned ? '' : (currentBoost.level ?? 50)}
+              disabled={currentBoost.isAttuned}
+              onChange={(e) => handleLevelChange(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
+              className="w-12 h-6 text-xs text-center bg-coh-dark border border-border/40 rounded px-1 disabled:opacity-40"
+            />
+          </div>
+          <button
+            onClick={handleAttunedToggle}
+            className={`h-6 px-2 text-[0.625rem] rounded border transition-colors ${
+              currentBoost.isAttuned
+                ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                : 'bg-coh-dark border-border/40 text-muted-foreground hover:border-amber-500/40'
+            }`}
+          >
+            Attuned
+          </button>
+        </div>
+      )}
       <Tabs defaultValue="io" className="px-3 pb-3">
         <TabsList className="w-full">
           <TabsTrigger value="io" className="flex-1 text-xs">IO</TabsTrigger>

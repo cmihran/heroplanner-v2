@@ -99,6 +99,8 @@ export interface SlottedBoost {
   icon: string | null;
   computedName: string | null;
   setName: string | null;
+  level: number | null;
+  isAttuned: boolean;
 }
 
 export interface BoostSetSummary {
@@ -172,6 +174,8 @@ export interface SavedPower {
 export interface SavedBoost {
   boostKey: string;
   setName: string | null;
+  level: number | null;
+  isAttuned: boolean;
 }
 
 export interface ResolvedBoost {

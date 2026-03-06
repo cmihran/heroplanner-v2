@@ -257,6 +257,10 @@ pub struct SavedPower {
 pub struct SavedBoost {
     pub boost_key: String,
     pub set_name: Option<String>,
+    #[serde(default)]
+    pub level: Option<i32>,
+    #[serde(default)]
+    pub is_attuned: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

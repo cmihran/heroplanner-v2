@@ -44,8 +44,15 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
     }
   };
 
-  const handleBoostClick = (boostKey: string, icon: string | null, computedName: string | null) => {
-    setBoostInSlot(powerFullName, slotIndex, { boostKey, icon, computedName, setName: selectedSet?.name ?? null });
+  const handleBoostClick = (boostKey: string, icon: string | null, computedName: string | null, attuned: boolean) => {
+    setBoostInSlot(powerFullName, slotIndex, {
+      boostKey,
+      icon,
+      computedName,
+      setName: selectedSet?.name ?? null,
+      level: attuned ? null : (selectedSet?.max_level ?? 50),
+      isAttuned: attuned,
+    });
     onSelect();
   };
 
@@ -121,7 +128,7 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
           {selectedSet.boosts.map((b) => (
             <button
               key={b.boost_key}
-              onClick={() => handleBoostClick(b.boost_key, b.icon, b.computed_name)}
+              onClick={() => handleBoostClick(b.boost_key, b.icon, b.computed_name, b.attuned)}
               className="px-3 py-2 text-xs text-left hover:bg-coh-secondary/30 transition-colors flex items-center gap-2"
             >
               {b.icon && <img src={imageUrl(b.icon)} alt="" className="w-4 h-4" />}
