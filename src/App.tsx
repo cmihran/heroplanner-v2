@@ -48,6 +48,12 @@ function App() {
         />
       ))}
       <Header />
+      <div
+        className="h-[2px] flex-shrink-0"
+        style={{
+          background: 'linear-gradient(90deg, transparent 0%, #3588e0 20%, #c8a84e 50%, #3588e0 80%, transparent 100%)',
+        }}
+      />
       <ResizablePanelGroup className="flex-1">
         <ResizablePanel defaultSize={30} minSize={20}>
           <LeftPanel />
