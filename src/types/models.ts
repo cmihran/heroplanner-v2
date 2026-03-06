@@ -244,9 +244,17 @@ export interface ActiveSetBonus {
   displayTexts: string[];
 }
 
+export interface StatCap {
+  category: string;
+  label: string;
+  capValue: number;
+  displayCap: string;
+}
+
 export interface TotalStatsResult {
   combinedStats: CombinedStat[];
   activeBonuses: ActiveSetBonus[];
+  statCaps: StatCap[];
   endDrain: number;
   baseHp: number;
   effectiveHp: number;

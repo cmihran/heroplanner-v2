@@ -6,7 +6,7 @@ use super::utils::{categorize_attrib, format_scale};
 use crate::db::DbState;
 use crate::models::{
     ActiveSetBonus, CalculatedEffect, CombinedStat, PowerSlottedEnhancements,
-    SlottedEnhancement, SlottedSetInfo, StatSource, TotalStatsResult,
+    SlottedEnhancement, SlottedSetInfo, StatCap, StatSource, TotalStatsResult,
 };
 
 /// Enhancement Diversification (ED): 3-zone piecewise diminishing returns.
@@ -664,7 +664,32 @@ pub fn calculate_total_stats(
         }
     }
 
-    // 4. Compute vital rates (before consuming sources_acc)
+    // 4. Extract AT-specific caps from raw_json
+    let mut cap_map: HashMap<(String, String), f64> = HashMap::new();
+    let mut stat_caps: Vec<StatCap> = Vec::new();
+
+    // Resistance caps from attrib_resistance_max.damage_type
+    let res_cap_map = [
+        ("smashing", "Smashing"), ("lethal", "Lethal"), ("fire", "Fire"),
+        ("cold", "Cold"), ("energy", "Energy"), ("negative_energy", "Negative Energy"),
+        ("psionic", "Psionic"), ("toxic", "Toxic"),
+    ];
+    for (json_key, label) in &res_cap_map {
+        let pointer = format!("/attrib_resistance_max/damage_type/{}", json_key);
+        if let Some(arr) = at_data.pointer(&pointer).and_then(|v| v.as_array()) {
+            if let Some(cap) = arr.get(level).and_then(|v| v.as_f64()) {
+                cap_map.insert(("Resistance".to_string(), label.to_string()), cap);
+                stat_caps.push(StatCap {
+                    category: "Resistance".to_string(),
+                    label: label.to_string(),
+                    cap_value: cap,
+                    display_cap: format_scale(cap, "Strength"),
+                });
+            }
+        }
+    }
+
+    // 5. Compute vital rates (before consuming sources_acc)
     // HP: "Maximum" aspect = flat additions, "Strength"/"Current" = percentage of base
     let (mut hp_flat, mut hp_pct) = (0.0_f64, 0.0_f64);
     if let Some(sources) = sources_acc.get(&("Recovery".to_string(), "Max HP".to_string())) {
@@ -722,7 +747,7 @@ pub fn calculate_total_stats(
             // Determine the majority aspect for the total display
             let display_aspect = merged.first().map(|(_, _, a)| a.clone()).unwrap_or_else(|| "Strength".to_string());
 
-            let total: f64 = merged.iter().map(|(_, v, _)| v).sum();
+            let raw_total: f64 = merged.iter().map(|(_, v, _)| v).sum();
             let sources: Vec<StatSource> = merged
                 .into_iter()
                 .map(|(name, val, aspect)| StatSource {
@@ -731,6 +756,13 @@ pub fn calculate_total_stats(
                     display_value: format_scale(val, &aspect),
                 })
                 .collect();
+
+            // Clamp to AT cap if available
+            let total = if let Some(&cap) = cap_map.get(&(key.0.clone(), key.1.clone())) {
+                raw_total.min(cap)
+            } else {
+                raw_total
+            };
 
             CombinedStat {
                 category: key.0,
@@ -745,6 +777,7 @@ pub fn calculate_total_stats(
     Ok(TotalStatsResult {
         combined_stats,
         active_bonuses,
+        stat_caps,
         end_drain,
         base_hp,
         effective_hp,

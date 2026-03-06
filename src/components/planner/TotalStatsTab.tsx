@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useHeroStore } from '@/stores/heroStore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronRight } from 'lucide-react';
-import type { CombinedStat, StatSource, TotalStatsResult } from '@/types/models';
+import type { CombinedStat, StatCap, StatSource, TotalStatsResult } from '@/types/models';
 
 const CATEGORY_ORDER = ['Offense', 'Defense', 'Resistance', 'Movement', 'Status Resistance', 'Recovery', 'Misc'];
 const VITAL_LABELS = new Set(['Max HP', 'Regeneration', 'Max End', 'Recovery', 'End Reduction']);
@@ -30,11 +30,13 @@ function groupByCategory(stats: CombinedStat[]): Record<string, CombinedStat[]> 
   return groups;
 }
 
-function StatRow({ stat, barColor }: { stat: CombinedStat; barColor?: string }) {
+function StatRow({ stat, barColor, cap }: { stat: CombinedStat; barColor?: string; cap?: StatCap }) {
   const [expanded, setExpanded] = useState(false);
   const hasSources = stat.sources.length > 1;
-  // For bar: totalValue is a fraction (e.g. 0.45 = 45%), cap display at 100%
-  const barPct = barColor ? Math.min(Math.abs(stat.totalValue) * 100, 100) : 0;
+  // For bar: scale so the cap = 100% of bar width (or 100% if no cap)
+  const barMax = cap ? cap.capValue : 1;
+  const barPct = barColor ? Math.min((Math.abs(stat.totalValue) / barMax) * 100, 100) : 0;
+  const atCap = cap && stat.totalValue >= cap.capValue - 0.001;
 
   const Row = hasSources ? 'button' : 'div';
 
@@ -59,6 +61,11 @@ function StatRow({ stat, barColor }: { stat: CombinedStat; barColor?: string }) 
         </span>
         <span className="relative font-mono text-slate-100">
           {stat.displayValue}
+          {cap && (
+            <span className={`text-[0.625rem] ml-1 ${atCap ? 'text-amber-400' : 'text-slate-500'}`}>
+              / {cap.displayCap}
+            </span>
+          )}
         </span>
       </Row>
       {expanded && (
@@ -272,7 +279,7 @@ function DamageSubGroup({ entries }: { entries: CombinedStat[] }) {
   );
 }
 
-function CategorySection({ category, entries, damageEntries }: { category: string; entries: CombinedStat[]; damageEntries?: CombinedStat[] }) {
+function CategorySection({ category, entries, damageEntries, capMap }: { category: string; entries: CombinedStat[]; damageEntries?: CombinedStat[]; capMap?: Map<string, StatCap> }) {
   const [collapsed, setCollapsed] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const barColor = category === 'Defense' ? 'rgba(168,85,247,0.25)' : category === 'Resistance' ? 'rgba(236,72,153,0.25)' : undefined;
@@ -303,7 +310,7 @@ function CategorySection({ category, entries, damageEntries }: { category: strin
       {!collapsed && (
         <div className="px-2 py-1">
           {visible.map((stat) => (
-            <StatRow key={stat.label} stat={stat} barColor={barColor} />
+            <StatRow key={stat.label} stat={stat} barColor={barColor} cap={capMap?.get(`${category}|${stat.label}`)} />
           ))}
           {damageEntries && damageEntries.length > 0 && (
             <DamageSubGroup entries={damageEntries} />
@@ -358,6 +365,7 @@ export function TotalStatsTab() {
   }
 
   const grouped = groupByCategory(totalStatsResult.combinedStats);
+  const capMap = new Map(totalStatsResult.statCaps.map((c) => [`${c.category}|${c.label}`, c]));
   const allCategories = [
     ...CATEGORY_ORDER.filter((c) => grouped[c] || (c === 'Offense' && grouped['Damage'])),
     ...Object.keys(grouped).filter((c) => !CATEGORY_ORDER.includes(c) && c !== 'Damage'),
@@ -379,7 +387,7 @@ export function TotalStatsTab() {
             if (entries.length === 0) return null;
           }
           return (
-            <CategorySection key={category} category={category} entries={entries} damageEntries={damageEntries} />
+            <CategorySection key={category} category={category} entries={entries} damageEntries={damageEntries} capMap={capMap} />
           );
         })}
       </div>

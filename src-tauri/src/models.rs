@@ -190,9 +190,19 @@ pub struct ActiveSetBonus {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct StatCap {
+    pub category: String,
+    pub label: String,
+    pub cap_value: f64,
+    pub display_cap: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TotalStatsResult {
     pub combined_stats: Vec<CombinedStat>,
     pub active_bonuses: Vec<ActiveSetBonus>,
+    pub stat_caps: Vec<StatCap>,
     pub end_drain: f64,
     pub base_hp: f64,
     pub effective_hp: f64,

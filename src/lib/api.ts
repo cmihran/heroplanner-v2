@@ -91,6 +91,7 @@ export const api = {
       : Promise.resolve({
           combinedStats: [],
           activeBonuses: [],
+          statCaps: [],
           endDrain: 0,
           baseHp: 0,
           effectiveHp: 0,
