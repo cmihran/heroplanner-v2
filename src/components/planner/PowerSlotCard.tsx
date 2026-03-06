@@ -1,4 +1,4 @@
-import { useState, useCallback, type DragEvent } from 'react';
+import { useState, useCallback, useRef, type DragEvent, type MouseEvent } from 'react';
 import { useHeroStore, type SelectedPower } from '@/stores/heroStore';
 import { imageUrl } from '@/lib/images';
 import { Check, Plus } from 'lucide-react';
@@ -18,6 +18,79 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
   const togglePowerActive = useHeroStore((s) => s.togglePowerActive);
 
   const [dragOver, setDragOver] = useState(false);
+  const [slotDragging, setSlotDragging] = useState(false);
+
+  // Drag-to-add/remove enhancement slots
+  const slotDragRef = useRef<{
+    startX: number;
+    startSlots: number;
+    lastThresholdSlots: number;
+  } | null>(null);
+
+  const handleSlotDragMouseDown = useCallback((e: MouseEvent<HTMLDivElement>) => {
+    // Only trigger on the container itself, not child elements (slot buttons, etc.)
+    if (e.target !== e.currentTarget) return;
+    // Only left mouse button
+    if (e.button !== 0) return;
+    if (!selectedPower) return;
+
+    const { numSlots } = selectedPower;
+
+    slotDragRef.current = {
+      startX: e.clientX,
+      startSlots: numSlots,
+      lastThresholdSlots: numSlots,
+    };
+    setSlotDragging(true);
+
+    const SLOT_WIDTH_PX = 44; // ~2.75rem at 16px base, approximate threshold
+
+    const handleMouseMove = (ev: globalThis.MouseEvent) => {
+      const ref = slotDragRef.current;
+      if (!ref || !selectedPower) return;
+
+      const deltaX = ev.clientX - ref.startX;
+      // Compute how many slots to change based on distance from start
+      const slotDelta = Math.round(deltaX / SLOT_WIDTH_PX);
+      const targetSlots = ref.startSlots + slotDelta;
+
+      // Clamp: at least 1, at most max_boosts
+      const clampedTarget = Math.max(1, Math.min(selectedPower.power.max_boosts, targetSlots));
+
+      if (clampedTarget !== ref.lastThresholdSlots) {
+        if (clampedTarget > ref.lastThresholdSlots) {
+          // Adding slots
+          const toAdd = clampedTarget - ref.lastThresholdSlots;
+          for (let i = 0; i < toAdd; i++) {
+            if (canAddMore()) {
+              addSlot(selectedPower.power.full_name);
+            }
+          }
+        } else {
+          // Removing slots
+          const toRemove = ref.lastThresholdSlots - clampedTarget;
+          for (let i = 0; i < toRemove; i++) {
+            // Remove from end; current numSlots may have changed
+            const currentSlots = ref.lastThresholdSlots - i;
+            if (currentSlots > 1) {
+              removeSlotAt(selectedPower.power.full_name, currentSlots - 1);
+            }
+          }
+        }
+        ref.lastThresholdSlots = clampedTarget;
+      }
+    };
+
+    const handleMouseUp = () => {
+      slotDragRef.current = null;
+      setSlotDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [selectedPower, addSlot, removeSlotAt, canAddMore]);
 
   const handleDragStart = useCallback((e: DragEvent) => {
     e.dataTransfer.setData('text/plain', String(level));
@@ -114,7 +187,10 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
 
       {/* Enhancement slots — overlapping bottom of pill */}
       {hasSlots && (
-        <div className="flex items-center gap-1 ml-4 pl-7 -mt-2 relative z-10">
+        <div
+          className={`flex items-center gap-1 ml-4 pl-7 -mt-2 relative z-10 pr-2 ${slotDragging ? 'cursor-ew-resize' : 'cursor-default'}`}
+          onMouseDown={handleSlotDragMouseDown}
+        >
           {/* Allocated slots */}
           {Array.from({ length: numSlots }, (_, i) => (
             <EnhancementSlot
@@ -127,11 +203,15 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
               canRemove={numSlots > 1}
             />
           ))}
-          {/* Ghost add button — visible on hover */}
+          {/* Ghost add button — visible on hover or during slot drag */}
           {numSlots < power.max_boosts && canAddMore() && (
             <button
               onClick={() => addSlot(power.full_name)}
-              className="w-[2.25rem] h-[2.25rem] rounded-full border-2 border-dashed border-coh-info/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:border-coh-info/60 hover:bg-coh-secondary/20"
+              className={`w-[2.5rem] h-[2.5rem] rounded-full border-2 border-dashed flex items-center justify-center transition-opacity hover:border-coh-info/60 hover:bg-coh-secondary/20 ${
+                slotDragging
+                  ? 'opacity-100 border-coh-info/50 bg-coh-info/10 animate-pulse'
+                  : 'border-coh-info/30 opacity-0 group-hover:opacity-100'
+              }`}
               title="Add enhancement slot"
             >
               <Plus className="h-3.5 w-3.5 text-coh-info/50" />
