@@ -2,6 +2,9 @@ import { useHeroStore, LEVEL_SLOTS } from '@/stores/heroStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PowerSlotCard } from './PowerSlotCard';
+import { InherentsTab } from './InherentsTab';
+import { IncarnatesTab } from './IncarnatesTab';
+import { AccoladesTab } from './AccoladesTab';
 
 export function RightPanel() {
   const levelToPower = useHeroStore((s) => s.levelToPower);
@@ -36,22 +39,16 @@ export function RightPanel() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="inherents" className="flex-1 p-4">
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Inherents — Coming soon
-          </div>
+        <TabsContent value="inherents" className="flex-1 min-h-0">
+          <InherentsTab />
         </TabsContent>
 
-        <TabsContent value="incarnates" className="flex-1 p-4">
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Incarnates — Coming soon
-          </div>
+        <TabsContent value="incarnates" className="flex-1 min-h-0">
+          <IncarnatesTab />
         </TabsContent>
 
-        <TabsContent value="accolades" className="flex-1 p-4">
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Accolades — Coming soon
-          </div>
+        <TabsContent value="accolades" className="flex-1 min-h-0">
+          <AccoladesTab />
         </TabsContent>
       </Tabs>
     </div>

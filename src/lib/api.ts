@@ -5,6 +5,7 @@ import type {
   BoostSetSummary,
   CalculatedEffect,
   HeroBuildFile,
+  InherentPowersResult,
   LoadBuildResult,
   NamedTableValues,
   PowerDetail,
@@ -34,6 +35,11 @@ export const api = {
 
   loadPowersetsForCategory: (categoryName: string): Promise<PowersetWithPowers[]> =>
     isTauri ? invoke('load_powersets_for_category', { categoryName }) : Promise.resolve(mockApi.loadPowersetsForCategory(categoryName)),
+
+  getInherentPowers: (archetypeName: string): Promise<InherentPowersResult> =>
+    isTauri
+      ? invoke('get_inherent_powers', { archetypeName })
+      : Promise.resolve({ atInherent: null, corePowers: [], fitnessPowers: [] }),
 
   getPowerDetail: (powerFullName: string) =>
     isTauri ? invoke<PowerDetail>('get_power_detail', { powerFullName }) : Promise.resolve({} as PowerDetail),

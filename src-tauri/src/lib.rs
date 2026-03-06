@@ -21,6 +21,7 @@ pub fn run() {
             commands::powersets::list_powerset_choices,
             commands::powersets::load_powerset,
             commands::powersets::load_powersets_for_category,
+            commands::powersets::get_inherent_powers,
             commands::powers::get_power_detail,
             commands::powers::get_powers_batch,
             commands::boosts::list_boost_sets_for_category,

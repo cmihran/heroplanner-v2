@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::db::DbState;
-use crate::models::{PowerSummary, PowersetCategory, PowersetWithPowers};
+use crate::models::{InherentPowerInfo, InherentPowersResult, PowerSummary, PowersetCategory, PowersetWithPowers};
 
 #[tauri::command]
 pub fn list_powerset_choices(
@@ -78,6 +78,101 @@ pub fn load_powersets_for_category(
     }
 
     Ok(result)
+}
+
+/// Get inherent powers for a given archetype.
+/// Returns the AT-specific inherent, core powers (Brawl, Sprint, Rest), and fitness powers.
+#[tauri::command]
+pub fn get_inherent_powers(
+    state: State<DbState>,
+    archetype_name: &str,
+) -> Result<InherentPowersResult, String> {
+    let db = state.0.lock().map_err(|e| e.to_string())?;
+
+    // Map archetype name to its AT-specific inherent power full_name
+    let at_inherent_name = match archetype_name {
+        "blaster" => Some("Inherent.Inherent.Defiance"),
+        "brute" => Some("Inherent.Inherent.Rage"),
+        "controller" => Some("Inherent.Inherent.Containment"),
+        "corruptor" => Some("Inherent.Inherent.Scourge"),
+        "defender" => Some("Inherent.Inherent.Vigilance"),
+        "dominator" => Some("Inherent.Inherent.Domination"),
+        "mastermind" => Some("Inherent.Inherent.Supremacy"),
+        "peacebringer" => Some("Inherent.Inherent.Cosmic_Balance"),
+        "scrapper" => Some("Inherent.Inherent.Critical_Hit"),
+        "sentinel" => Some("Inherent.Inherent.Opportunity"),
+        "stalker" => Some("Inherent.Inherent.Assassination"),
+        "tanker" => Some("Inherent.Inherent.Gauntlet"),
+        "warshade" => Some("Inherent.Inherent.Dark_Sustenance"),
+        "arachnos_soldier" => Some("Inherent.Inherent.Spider_Conditioning"),
+        "arachnos_widow" => Some("Inherent.Inherent.Widow_Conditioning"),
+        _ => None,
+    };
+
+    // Core inherent powers everyone gets
+    let core_names = [
+        "Inherent.Inherent.Brawl",
+        "Inherent.Inherent.Sprint",
+        "Inherent.Inherent.Rest",
+    ];
+
+    // Fitness powers everyone gets
+    let fitness_names = [
+        "Inherent.Fitness.Swift",
+        "Inherent.Fitness.Hurdle",
+        "Inherent.Fitness.Health",
+        "Inherent.Fitness.Stamina",
+    ];
+
+    let fetch_power = |full_name: &str| -> Result<Option<InherentPowerInfo>, String> {
+        let mut stmt = db
+            .prepare(
+                "SELECT full_name, display_name, display_help, display_short_help, icon, power_type
+                 FROM powers WHERE full_name = ?1",
+            )
+            .map_err(|e| e.to_string())?;
+
+        let result = stmt
+            .query_row([full_name], |row| {
+                Ok(InherentPowerInfo {
+                    full_name: row.get(0)?,
+                    display_name: row.get(1)?,
+                    display_help: row.get(2)?,
+                    display_short_help: row.get(3)?,
+                    icon: row.get(4)?,
+                    power_type: row.get(5)?,
+                })
+            })
+            .ok();
+
+        Ok(result)
+    };
+
+    let at_inherent = if let Some(name) = at_inherent_name {
+        fetch_power(name)?
+    } else {
+        None
+    };
+
+    let mut core_powers = Vec::new();
+    for name in &core_names {
+        if let Some(power) = fetch_power(name)? {
+            core_powers.push(power);
+        }
+    }
+
+    let mut fitness_powers = Vec::new();
+    for name in &fitness_names {
+        if let Some(power) = fetch_power(name)? {
+            fitness_powers.push(power);
+        }
+    }
+
+    Ok(InherentPowersResult {
+        at_inherent,
+        core_powers,
+        fitness_powers,
+    })
 }
 
 fn load_powerset_inner(
