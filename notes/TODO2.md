@@ -1,0 +1,1 @@
+i shouldnt be able to change my primary power set if i have powers selected

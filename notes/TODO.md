@@ -34,7 +34,7 @@
 - **Change**: Increase to approximately `w-[2.5rem] h-[2.5rem]` or `w-[2.75rem] h-[2.75rem]`. Adjust the ghost add button, remove button positioning, and slot container padding/margins to match.
 - **Note**: Use `rem` units (not `px`) so sizes scale with the UI zoom.
 
-### 2.3 Enhancement levels
+### ~~2.3 Enhancement levels~~ ✅
 - **Scope**: Each slotted enhancement should have an associated level (e.g. level 50 IO, level 25 IO). Attuned enhancements auto-scale to character level.
 - **Data model changes**:
   - Add `level: number | null` and `isAttuned: boolean` to the `SlottedBoost` type in `src/types/models.ts`
@@ -46,7 +46,7 @@
   - Add an "Attuned" toggle in the picker. When attuned, the level badge shows "A" or a special indicator, and the enhancement auto-scales to the build's level for calculation purposes
 - **Backend**: The boost set data already has `min_level`/`max_level` in the `boost_sets` table. Enhancement level affects the magnitude of the boost (higher level = stronger).
 
-### 2.4 Enhancements modify power stats (full calculation)
+### ~~2.4 Enhancements modify power stats (full calculation)~~ ✅
 - **Scope**: Slotted enhancements should affect all calculated power stats (accuracy, damage, recharge, endurance cost, etc.). Results should appear in both PowerHoverCard tooltips and Total Stats tab.
 - **Backend changes** (`src-tauri/src/commands/calc.rs`):
   - `calculate_power_effects` needs a new parameter: the list of slotted enhancements for that power (boost keys + levels)
@@ -59,7 +59,7 @@
   - Total Stats should reflect enhancement-boosted power effects
 - **Dependencies**: This task depends on 2.3 (enhancement levels) since the enhancement's contribution depends on its level.
 
-### 2.5 Enhancement Diversification (ED)
+### ~~2.5 Enhancement Diversification (ED)~~ ✅
 - **Scope**: Implement the diminishing returns system for enhancement values. In CoH, enhancements of the same type in the same power have diminishing returns above certain thresholds.
 - **Formula** (3-zone piecewise):
   - 0% to ~40% (zone 1): 100% effectiveness (1:1 return)
@@ -118,7 +118,7 @@
   - If defense exceeds 45%, the bar portion above the cap could use a different color/opacity to indicate "over soft cap"
   - The bar should scale so that 45% = ~75% of the bar width (so values above cap are still visible but clearly past the line)
 
-### 4.3 Value caps for resistance, max HP, etc.
+### ~~4.3 Value caps for resistance, max HP, etc.~~ ✅
 - **Description**: Apply and display AT-specific caps for stats:
   - **Resistance cap**: varies by AT (Tankers 90%, Brutes 90%, Scrappers 75%, Blasters 75%, etc.) — from `attrib_str_max` or `attrib_res_max` in archetype raw_json
   - **Max HP cap**: each AT has a maximum HP cap
@@ -127,7 +127,7 @@
 - **Backend**: `calculate_total_stats` in `calc.rs` should read the AT's cap values from `raw_json` and clamp final stats. Return the cap values alongside the stats so the frontend can display them.
 - **Frontend**: Show cap values in the UI (e.g. "75% / 75% cap" for resistance). Use the cap as the bar's 100% reference point.
 
-### 4.4 Run Speed attribution missing
+### ~~4.4 Run Speed attribution missing~~ ✅
 - **File**: `src-tauri/src/commands/utils.rs:133` — `("RunningSpeed", _) => ("Movement", "Run Speed")`
 - **Problem**: Run Speed shows up as a stat but doesn't have source attribution (can't expand to see which powers contribute).
 - **Investigation**: The categorization exists, so the issue might be that movement powers use a different attrib name, target type, or aspect that gets filtered out. Check if movement effects have `target != "Self"` (line 249 in calc.rs filters to Self-only). Sprint, Super Speed, etc. might target differently. Also check if the attrib name in the data matches `RunningSpeed` exactly.
@@ -150,7 +150,7 @@
 - **Store action**: Add a `clearBuild()` action to `heroStore.ts` that resets `levelToPower`, `powerNameToLevel`, `totalSlotsAdded`, `heroName`, `isDirty`, and optionally `selectedPrimary`/`selectedSecondary`/pools.
 - **UI**: Add an icon button (e.g. `Trash2` or `FileX` from lucide-react) in the header's app controls section.
 
-### 5.2 Confirmation dialog for destructive actions
+### ~~5.2 Confirmation dialog for destructive actions~~ ✅
 - **Trigger points**:
   - Clearing the current build (5.1)
   - Changing archetype when powers are already selected

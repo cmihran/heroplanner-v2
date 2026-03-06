@@ -51,20 +51,11 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
     />
   );
 
-  // When popover is open, don't show the hover card (they'd conflict)
-  const trigger = boost && !open ? (
-    <EnhancementHoverCard boost={boost} side="top">
-      {slotButton}
-    </EnhancementHoverCard>
-  ) : (
-    slotButton
-  );
-
-  return (
+  const content = (
     <div className="relative group/slot">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          {trigger}
+          {slotButton}
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="start">
           <EnhancementPicker
@@ -85,4 +76,14 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
       )}
     </div>
   );
+
+  if (boost && !open) {
+    return (
+      <EnhancementHoverCard boost={boost} side="top">
+        {content}
+      </EnhancementHoverCard>
+    );
+  }
+
+  return content;
 }
