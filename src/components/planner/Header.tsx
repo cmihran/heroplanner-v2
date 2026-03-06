@@ -1,9 +1,12 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Minus, Square, X, Save, FilePlus2, FolderOpen } from 'lucide-react';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { Minus, Square, X, Save, FilePlus2, FolderOpen, Trash2, Heart } from 'lucide-react';
 import { Settings } from './Settings';
 import { useHeroStore } from '@/stores/heroStore';
 
 const appWindow = getCurrentWindow();
+
+const DONATE_URL = 'https://ko-fi.com/heroplanner';
 
 export function Header() {
   const archetype = useHeroStore((s) => s.archetype);
@@ -11,6 +14,15 @@ export function Header() {
   const saveBuild = useHeroStore((s) => s.saveBuild);
   const saveAsNewBuild = useHeroStore((s) => s.saveAsNewBuild);
   const loadBuild = useHeroStore((s) => s.loadBuild);
+  const clearBuild = useHeroStore((s) => s.clearBuild);
+
+  const openDonate = async () => {
+    try {
+      await openUrl(DONATE_URL);
+    } catch {
+      window.open(DONATE_URL, '_blank');
+    }
+  };
 
   return (
     <header
@@ -50,6 +62,21 @@ export function Header() {
           title="Load Build"
         >
           <FolderOpen className="h-4 w-4" />
+        </button>
+        <button
+          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-red-400 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+          onClick={() => clearBuild()}
+          disabled={!archetype}
+          title="Clear Build"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+        <button
+          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-pink-400 hover:bg-white/10 transition-colors"
+          onClick={openDonate}
+          title="Support Development"
+        >
+          <Heart className="h-4 w-4" />
         </button>
       </div>
 
