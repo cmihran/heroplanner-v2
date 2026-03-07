@@ -17,15 +17,15 @@ heroplanner-v2/
   src/                          # React frontend (thin display layer)
     components/
       ui/                       # shadcn/ui primitives (Button, Card, Select, Tabs, HoverCard, etc.)
-      planner/                  # App components (Header, LeftPanel, RightPanel, HeroInfo, PowerSetSelector, PowerSlotCard, EnhancementSlot, EnhancementPicker, BoostSetBrowser, PowerHoverCard, EnhancementHoverCard, Settings, TotalStatsTab, SetBonusesTab, DetailPane, InherentsTab, IncarnatesTab, AccoladesTab)
+      ErrorBoundary.tsx         # React Error Boundary — catches render crashes, reports to stderr
+      planner/                  # App components (Header, LeftPanel, RightPanel, HeroInfo, PowerSetSelector, PowerSlotCard, EnhancementSlot, EnhancementPicker, BoostSetBrowser, PowerHoverCard, EnhancementHoverCard, Settings, TotalStatsTab, SetBonusesTab, DetailPane, InherentsTab, IncarnatesTab, AccoladesTab, ConfirmDialog)
     lib/
-      api.ts                    # Typed invoke() wrappers for Tauri commands
+      api.ts                    # Typed trackedInvoke() wrappers for Tauri commands (IPC error logging)
       mock-data.ts              # Mock data for browser dev mode (no Tauri)
       utils.ts                  # shadcn cn() utility
       images.ts                 # Image path helper
-      enhancement-data.ts       # IO enhancement icon mappings
     stores/
-      heroStore.ts              # Zustand store — manages UI state, calls Rust for data
+      heroStore.ts              # Zustand store — thin UI state, delegates to Rust engine
     types/
       models.ts                 # TS types mirroring Rust structs
     styles/
@@ -35,9 +35,16 @@ heroplanner-v2/
   src-tauri/                    # Rust backend
     src/
       main.rs                  # Tauri entry (calls lib::run)
-      lib.rs                   # Tauri setup: DB init, plugin registration, command handlers
+      lib.rs                   # Tauri setup: DB init, engine init, plugin registration, command handlers
       db.rs                    # SQLite connection (DbState with Mutex<Connection>)
       models.rs                # Rust structs: Archetype, Power, Effect, Template, BoostSet, HeroBuildFile, etc.
+      engine/                  # In-memory build engine (server-side state management)
+        mod.rs                 # EngineState with Mutex<HeroBuild>
+        build.rs               # HeroBuild: power selection, slot management, boost assignment
+        build_view.rs          # BuildView: serializable snapshot of build state for frontend
+        calc.rs                # Enhancement/stat calculation using preloaded game data
+        cache.rs               # LRU/memoization for expensive lookups
+        game_data.rs           # GameData: preloads AT tables, enhancement effects, set bonuses at startup
       commands/
         mod.rs                 # Re-exports all command modules
         archetypes.rs          # list_archetypes, get_archetype_tables
@@ -46,6 +53,8 @@ heroplanner-v2/
         boosts.rs              # list_boost_sets_for_category, get_boost_set_detail
         builds.rs              # save_build, load_build, load_build_from_path, resolve_boost_keys, pick_directory
         calc.rs                # calculate_power_effects, calculate_total_stats (aggregate stats from powers + set bonuses)
+        engine_cmds.rs         # Engine commands: build CRUD, power/slot/boost mutations → BuildView
+        settings.rs            # Settings: set_zoom
         utils.rs               # Shared utilities: format_attrib, format_scale, categorize_attrib
     migrations/
       001_initial_schema.sql   # Full SQLite schema
@@ -75,7 +84,7 @@ heroplanner-v2/
 - **Frontend only:** `npm run dev:frontend` (Vite dev server at localhost:5173, no Tauri)
 - **Build:** `npm run build` (production `tauri build`)
 - **Lint:** `npm run lint` (ESLint)
-- **Type check:** `npx tsc -b --noEmit`
+- **Type check:** `npx tsc -p tsconfig.app.json --noEmit`
 - **Rust check:** `cd src-tauri && cargo check`
 - **Data migration:** `python3 scripts/migrate-zip-to-sqlite.py` (auto-detects latest `raw_data_*.zip`)
 - **Upscale icons:** `make upscale-list` (show models/progress), `make upscale-dat` or `make upscale-tta` (run upscale), `make upscale-activate MODEL=<name>` (switch icon set), `make upscale-restore` (restore originals)
@@ -103,6 +112,7 @@ heroplanner-v2/
 - Use `rem` units (not `px`) for sizes that should scale with zoom — Tailwind utilities already use rem; custom sizes like `text-[0.625rem]` instead of `text-[10px]`
 - Rust: standard formatting, `serde` derive on all structs crossing the Tauri bridge
 - State: Zustand for frontend UI state, heavy data/computation in Rust
+- **Zustand selector rule:** NEVER return new objects/arrays from inside a `useHeroStore()` selector — e.g. `useHeroStore((s) => s.foo ?? {})` creates a new `{}` every render, causing infinite re-render loops. Instead, move the fallback outside: `useHeroStore((s) => s.foo) ?? STABLE_EMPTY` where `STABLE_EMPTY` is a module-level constant. Primitives (`?? null`, `?? false`, `?? 0`, `?? ''`) are safe inside selectors.
 
 ## Data Model
 
@@ -140,6 +150,24 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 | `set_zoom` | window, factor | `Result<()>` |
 | `pick_directory` | app, default_dir? | `Option<String>` |
 
+## Debugging & Error Visibility
+
+- **Frontend errors appear in stderr**: `index.html` has a global error handler that calls `log_frontend_error` via Tauri IPC, printing `[FRONTEND ERROR] ...` to the terminal. WebKitGTK silently swallows JS errors by default — without this, a React crash shows as a blank window with no terminal output and exit code 0.
+- **After any frontend changes, check the terminal** for `[FRONTEND ERROR]` lines. If the app window appears but is blank/unresponsive, this is almost certainly a JS runtime error — check the terminal output.
+
+## Agent Validation Protocol
+
+After making ANY frontend or backend change, run `make dev` and watch the terminal output. The app self-reports its health:
+
+- `[READY]` — app rendered successfully (appears after React mounts)
+- `[FRONTEND ERROR]` — fatal JS error (process exits with code 1)
+- `[FRONTEND WARNING]` — non-fatal diagnostic (app stays alive)
+- `[IPC ERROR] cmd: msg` — a Tauri invoke() call was rejected
+- `[CONSOLE.ERROR]` / `[CONSOLE.WARN]` — intercepted console output
+- `[REACT ERROR]` — ErrorBoundary caught a render crash (fatal)
+
+If the app crashes, the process exits immediately with a clear error message. No blank windows, no silent failures. The agent does not need a separate smoke test command — just run `make dev` and check the output.
+
 ## Known Quirks
 
 - `react-resizable-panels` v4 renamed exports: `Group` (not PanelGroup), `Panel`, `Separator` (not PanelResizeHandle). No `direction` prop — horizontal by default.
@@ -160,14 +188,7 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 - `HeroBuildFile.inherent_powers` uses `#[serde(default)]` for backward compatibility with save files that predate inherent slotting.
 - `SlottedBoost`/`SavedBoost` have `boostLevel` (0-5 IO booster level) and `setGroupName` (Archetype, Very_Rare, etc.) — both use `#[serde(default)]` on the Rust side for backward compat.
 - Archetype enhancements are always attuned (forced in `BoostSetBrowser`/`EnhancementPicker`). Very Rare (purple) sets are always attuned. Set enhancement levels are clamped to `[min_level, max_level]`.
-- IO boosters (+1 to +5): only on non-attuned set enhancements, effective level = `level + boost_level` (capped at 50) in `compute_enhancement_strengths`.
-
-## User Preferences
-- Wants to vibe-code everything (AI writes all code, user doesn't write frontend)
-- Desktop performance is #1 priority (heavy simulations, large datasets)
-- Mobile is a later nice-to-have
-- Chose SQLite over bundled JSON files for data storage
-- Chose Zustand for lightweight frontend state (heavy state in Rust)
+- IO boosters (+1 to +5): on any non-attuned IO enhancement (plain or set), effective level = `level + boost_level` (capped at 50) in `compute_enhancement_strengths`.
 
 ### Code Intelligence
 

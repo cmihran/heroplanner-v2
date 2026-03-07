@@ -8,6 +8,39 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Surface JS errors in the terminal (stderr) so they're visible to developers and AI agents.
+      // Without this, WebKitGTK swallows errors silently — the app appears to start but shows a blank window.
+      function _reportError(msg) {
+        if (window.__TAURI_INTERNALS__) {
+          window.__TAURI_INTERNALS__.invoke('log_frontend_error', { message: msg });
+        }
+      }
+      function _reportWarning(msg) {
+        if (window.__TAURI_INTERNALS__) {
+          window.__TAURI_INTERNALS__.invoke('log_frontend_warning', { message: msg });
+        }
+      }
+      window.addEventListener('error', function(e) {
+        _reportError(e.message + ' at ' + (e.filename||'?') + ':' + (e.lineno||'?'));
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        _reportError('Unhandled rejection: ' + (e.reason?.message || e.reason));
+      });
+      // Monkey-patch console.error/warn to forward to terminal (non-fatal)
+      (function() {
+        var origError = console.error;
+        var origWarn = console.warn;
+        console.error = function() {
+          origError.apply(console, arguments);
+          _reportWarning('[CONSOLE.ERROR] ' + Array.prototype.slice.call(arguments).join(' '));
+        };
+        console.warn = function() {
+          origWarn.apply(console, arguments);
+          _reportWarning('[CONSOLE.WARN] ' + Array.prototype.slice.call(arguments).join(' '));
+        };
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

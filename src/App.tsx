@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Toaster } from 'sonner';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -30,15 +31,19 @@ function App() {
     loadInitialData();
   }, [loadInitialData]);
 
+  useEffect(() => {
+    if (isTauri) invoke('log_frontend_ready');
+  }, []);
+
   // Intercept OS-level window close (Alt+F4, taskbar close) to warn about unsaved changes
   useEffect(() => {
     if (!isTauri) return;
     const unlisten = appWindow.onCloseRequested(async (event) => {
-      const dirty = useHeroStore.getState().isDirty;
+      const dirty = useHeroStore.getState().buildView?.isDirty ?? false;
       if (dirty) {
         event.preventDefault();
         const ok = await confirm('Unsaved Changes', 'You have unsaved changes. Close without saving?', 'Close');
-        if (ok) appWindow.destroy();
+        if (ok) await appWindow.destroy();
       }
     });
     return () => { unlisten.then((fn) => fn()); };
@@ -59,7 +64,7 @@ function App() {
       {edges.map(({ dir, style }) => (
         <div
           key={dir}
-          className="fixed z-50"
+          className="fixed z-[5]"
           style={style}
           onMouseDown={() => appWindow.startResizeDragging(dir)}
         />
@@ -67,7 +72,7 @@ function App() {
       <Header />
       <div className="h-[2px] flex-shrink-0 header-divider" />
       <ResizablePanelGroup className="flex-1">
-        <ResizablePanel defaultSize={30} minSize={20}>
+        <ResizablePanel defaultSize={30} minSize={20} className="overflow-hidden">
           <LeftPanel />
         </ResizablePanel>
         <ResizableHandle withHandle />
