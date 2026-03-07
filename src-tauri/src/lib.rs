@@ -1,7 +1,7 @@
 mod db;
-mod engine;
-mod models;
-mod commands;
+pub mod engine;
+pub mod models;
+pub mod commands;
 
 use db::DbState;
 use engine::EngineState;

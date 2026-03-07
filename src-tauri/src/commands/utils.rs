@@ -166,3 +166,155 @@ pub fn categorize_attrib(attrib: &str, aspect: &str) -> (&'static str, &'static 
         _ => ("Misc", "Other"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_attrib_damage_types() {
+        assert_eq!(format_attrib("Smashing_Dmg"), "Smashing");
+        assert_eq!(format_attrib("Lethal_Dmg"), "Lethal");
+        assert_eq!(format_attrib("Fire_Dmg"), "Fire");
+        assert_eq!(format_attrib("Cold_Dmg"), "Cold");
+        assert_eq!(format_attrib("Energy_Dmg"), "Energy");
+        assert_eq!(format_attrib("Negative_Energy_Dmg"), "Negative Energy");
+        assert_eq!(format_attrib("Psionic_Dmg"), "Psionic");
+        assert_eq!(format_attrib("Toxic_Dmg"), "Toxic");
+    }
+
+    #[test]
+    fn format_attrib_defense_types() {
+        assert_eq!(format_attrib("Melee"), "Melee");
+        assert_eq!(format_attrib("Ranged"), "Ranged");
+        assert_eq!(format_attrib("Area"), "AoE");
+        assert_eq!(format_attrib("Smashing"), "Smashing");
+    }
+
+    #[test]
+    fn format_attrib_enhancement_types() {
+        assert_eq!(format_attrib("Accuracy"), "Accuracy");
+        assert_eq!(format_attrib("RechargeTime"), "Recharge");
+        assert_eq!(format_attrib("EnduranceDiscount"), "End Reduction");
+        assert_eq!(format_attrib("Recovery"), "Recovery");
+    }
+
+    #[test]
+    fn format_attrib_specials() {
+        assert_eq!(format_attrib("Grant_Power"), "Special");
+        assert_eq!(format_attrib("Execute_Power"), "Special");
+        assert_eq!(format_attrib("Null"), "Special");
+    }
+
+    #[test]
+    fn format_attrib_unknown_passthrough() {
+        assert_eq!(format_attrib("SomeUnknownThing"), "SomeUnknownThing");
+    }
+
+    #[test]
+    fn format_scale_percentage() {
+        assert_eq!(format_scale(0.5, "Strength"), "50%");
+        assert_eq!(format_scale(0.123, "Strength"), "12.30%");
+        assert_eq!(format_scale(1.0, "Current"), "100%");
+        assert_eq!(format_scale(0.0, "Resistance"), "0%");
+    }
+
+    #[test]
+    fn format_scale_absolute() {
+        assert_eq!(format_scale(100.0, "Absolute"), "100");
+        assert_eq!(format_scale(3.14, "Maximum"), "3.14");
+    }
+
+    #[test]
+    fn format_scale_negative_zero() {
+        assert_eq!(format_scale(-0.0, "Strength"), "0%");
+        assert_eq!(format_scale(-0.0, "Absolute"), "0");
+    }
+
+    #[test]
+    fn categorize_attrib_defense() {
+        assert_eq!(categorize_attrib("Melee", "Current"), ("Defense", "Melee"));
+        assert_eq!(categorize_attrib("Ranged", "Current"), ("Defense", "Ranged"));
+        assert_eq!(categorize_attrib("Fire", "Current"), ("Defense", "Fire"));
+    }
+
+    #[test]
+    fn categorize_attrib_resistance() {
+        assert_eq!(
+            categorize_attrib("Smashing", "Resistance"),
+            ("Resistance", "Smashing")
+        );
+        assert_eq!(
+            categorize_attrib("Smashing_Dmg", "Resistance"),
+            ("Resistance", "Smashing")
+        );
+    }
+
+    #[test]
+    fn categorize_attrib_recovery() {
+        assert_eq!(categorize_attrib("HitPoints", "Maximum"), ("Recovery", "Max HP"));
+        assert_eq!(categorize_attrib("Recovery", "Strength"), ("Recovery", "Recovery"));
+        assert_eq!(
+            categorize_attrib("Regeneration", "Strength"),
+            ("Recovery", "Regeneration")
+        );
+    }
+
+    #[test]
+    fn categorize_attrib_offense() {
+        assert_eq!(categorize_attrib("Accuracy", "Strength"), ("Offense", "Accuracy"));
+        assert_eq!(categorize_attrib("ToHit", "Current"), ("Offense", "ToHit"));
+        assert_eq!(categorize_attrib("RechargeTime", "Strength"), ("Offense", "Recharge"));
+    }
+
+    #[test]
+    fn categorize_attrib_damage() {
+        assert_eq!(
+            categorize_attrib("Smashing_Dmg", "Strength"),
+            ("Damage", "Smashing")
+        );
+        assert_eq!(
+            categorize_attrib("Fire_Dmg", "Strength"),
+            ("Damage", "Fire")
+        );
+    }
+
+    #[test]
+    fn categorize_attrib_movement() {
+        assert_eq!(
+            categorize_attrib("RunningSpeed", "Strength"),
+            ("Movement", "Run Speed")
+        );
+        assert_eq!(
+            categorize_attrib("FlyingSpeed", "Strength"),
+            ("Movement", "Fly Speed")
+        );
+    }
+
+    #[test]
+    fn categorize_attrib_status_resistance() {
+        assert_eq!(
+            categorize_attrib("Held", "Resistance"),
+            ("Status Resistance", "Hold")
+        );
+        assert_eq!(
+            categorize_attrib("Stunned", "Resistance"),
+            ("Status Resistance", "Stun")
+        );
+    }
+
+    #[test]
+    fn categorize_attrib_skip() {
+        assert_eq!(categorize_attrib("Grant_Power", "Strength"), ("Skip", "Special"));
+        assert_eq!(categorize_attrib("Null", "Strength"), ("Skip", "Special"));
+    }
+
+    #[test]
+    fn categorize_attrib_misc() {
+        assert_eq!(
+            categorize_attrib("StealthRadius_PVE", "Strength"),
+            ("Misc", "Stealth (PvE)")
+        );
+        assert_eq!(categorize_attrib("UnknownThing", "Strength"), ("Misc", "Other"));
+    }
+}

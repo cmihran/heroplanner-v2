@@ -718,3 +718,144 @@ fn load_boost_metadata(conn: &Connection) -> HashMap<String, BoostMeta> {
     }
     map
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_db_conn() -> Option<Connection> {
+        let paths = ["heroplanner.db", "src-tauri/heroplanner.db"];
+        paths
+            .iter()
+            .map(std::path::PathBuf::from)
+            .find(|p| p.exists())
+            .and_then(|p| Connection::open(p).ok())
+    }
+
+    #[test]
+    #[ignore]
+    fn load_game_data_expected_counts() {
+        let conn = test_db_conn().expect("heroplanner.db not found");
+        let gd = load_game_data(&conn);
+        assert!(
+            gd.archetype_tables.len() > 1000,
+            "AT tables: {}",
+            gd.archetype_tables.len()
+        );
+        assert_eq!(gd.archetype_ids.len(), 15, "Expected 15 player archetypes");
+        assert!(
+            gd.enhancement_effects.len() > 500,
+            "Enhancement effects: {}",
+            gd.enhancement_effects.len()
+        );
+        assert!(
+            gd.set_bonus_data.len() > 200,
+            "Set bonuses: {}",
+            gd.set_bonus_data.len()
+        );
+        assert!(
+            gd.power_metadata.len() > 20000,
+            "Power metadata: {}",
+            gd.power_metadata.len()
+        );
+        assert!(
+            gd.boost_metadata.len() > 600,
+            "Boost metadata: {}",
+            gd.boost_metadata.len()
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn known_archetype_ids() {
+        let conn = test_db_conn().expect("heroplanner.db not found");
+        let gd = load_game_data(&conn);
+        assert_eq!(gd.archetype_ids.get("blaster"), Some(&3));
+        assert_eq!(gd.archetype_ids.get("tanker"), Some(&14));
+        assert_eq!(gd.archetype_ids.get("scrapper"), Some(&11));
+    }
+
+    #[test]
+    #[ignore]
+    fn blaster_base_stats() {
+        let conn = test_db_conn().expect("heroplanner.db not found");
+        let gd = load_game_data(&conn);
+        let blaster_id = *gd.archetype_ids.get("blaster").expect("blaster not found");
+        let stats = gd.archetype_stats.get(&blaster_id).expect("Blaster stats missing");
+        assert!(
+            (stats.hp_by_level[0] - 102.5).abs() < 0.1,
+            "HP[0] = {}",
+            stats.hp_by_level[0]
+        );
+        assert!(
+            (stats.hp_by_level[49] - 1204.76).abs() < 0.1,
+            "HP[49] = {}",
+            stats.hp_by_level[49]
+        );
+        assert!(
+            (stats.end_by_level[49] - 100.0).abs() < 0.1,
+            "End[49] = {}",
+            stats.end_by_level[49]
+        );
+        assert!(
+            (stats.base_recovery - 1.0).abs() < 0.01,
+            "recovery = {}",
+            stats.base_recovery
+        );
+        assert!(
+            (stats.base_regen - 0.25).abs() < 0.01,
+            "regen = {}",
+            stats.base_regen
+        );
+        assert!(
+            (stats.base_to_hit - 0.75).abs() < 0.01,
+            "to_hit = {}",
+            stats.base_to_hit
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn tanker_resistance_cap() {
+        let conn = test_db_conn().expect("heroplanner.db not found");
+        let gd = load_game_data(&conn);
+        let tanker_id = *gd.archetype_ids.get("tanker").expect("tanker not found");
+        let stats = gd.archetype_stats.get(&tanker_id).expect("Tanker stats missing");
+        let smashing_caps = stats.res_caps.get("Smashing").expect("No Smashing res cap");
+        assert!(
+            (smashing_caps[49] - 0.90).abs() < 0.01,
+            "Tanker Smashing cap[49] = {}",
+            smashing_caps[49]
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn combat_mod_substitution_applied() {
+        let conn = test_db_conn().expect("heroplanner.db not found");
+        let gd = load_game_data(&conn);
+        let effects = gd
+            .enhancement_effects
+            .get("Generic_Accuracy")
+            .expect("Generic_Accuracy not found");
+        // CombatMod substitution should have replaced *_ones -> *_boosts_33 with scale 1.0
+        let has_boosts_33 = effects
+            .iter()
+            .any(|e| e.table_name.contains("boosts_33") && (e.scale - 1.0).abs() < 0.01);
+        assert!(has_boosts_33, "CombatMod substitution not applied");
+    }
+
+    #[test]
+    #[ignore]
+    fn known_power_metadata() {
+        let conn = test_db_conn().expect("heroplanner.db not found");
+        let gd = load_game_data(&conn);
+        let meta = gd
+            .power_metadata
+            .get("Blaster_Ranged.Fire_Blast.Fire_Blast")
+            .expect("Fire Blast not found");
+        assert_eq!(meta.display_name, "Fire Blast");
+        assert!(meta.max_boosts > 0);
+        assert!(meta.available_level <= 1);
+    }
+}

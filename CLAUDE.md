@@ -80,14 +80,25 @@ heroplanner-v2/
 
 ## Commands
 
-- **Dev:** `npm run dev` (runs `tauri dev` — Rust backend + Vite frontend with hot reload)
-- **Frontend only:** `npm run dev:frontend` (Vite dev server at localhost:5173, no Tauri)
-- **Build:** `npm run build` (production `tauri build`)
-- **Lint:** `npm run lint` (ESLint)
-- **Type check:** `npx tsc -p tsconfig.app.json --noEmit`
-- **Rust check:** `cd src-tauri && cargo check`
-- **Data migration:** `python3 scripts/migrate-zip-to-sqlite.py` (auto-detects latest `raw_data_*.zip`)
-- **Upscale icons:** `make upscale-list` (show models/progress), `make upscale-dat` or `make upscale-tta` (run upscale), `make upscale-activate MODEL=<name>` (switch icon set), `make upscale-restore` (restore originals)
+All commands are available as `make` targets. Run `make help` to list them.
+
+| Target | Description |
+|--------|-------------|
+| `make dev` | Start Tauri dev (Rust + Vite with hot reload) |
+| `make frontend` | Start Vite frontend only (localhost:5173, no Tauri) |
+| `make build` | Production build (Tauri + Vite) |
+| `make lint` | Run ESLint |
+| `make typecheck` | TypeScript type check |
+| `make rustcheck` | Rust cargo check |
+| `make test` | Run Rust unit tests (no DB required) |
+| `make test-all` | Run all Rust tests including DB integration tests |
+| `make check` | Run all checks (lint + typecheck + rustcheck) |
+| `make smoke` | Run all tests + smoke test the app |
+| `make migrate` | Run zip-to-SQLite migration (auto-detects latest zip) |
+| `make upscale-list` | Show upscale models and progress |
+| `make upscale MODEL=<name>` | Upscale icons with a specific model |
+| `make upscale-activate MODEL=<name>` | Switch active icon set |
+| `make upscale-restore` | Restore original icons |
 
 ## Prerequisites
 
@@ -157,7 +168,7 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 
 ## Agent Validation Protocol
 
-After making ANY frontend or backend change, run `make smoke` to verify the app starts cleanly. It launches the full app, waits for `[READY]` or a fatal error, then kills everything and exits:
+After making ANY frontend or backend change, run `make smoke` to validate. It first runs all Rust tests (including DB integration tests), then launches the full app, waits for `[READY]` or a fatal error, then kills everything and exits:
 
 - Exit code 0 + `SMOKE TEST PASSED` — app compiled and rendered successfully
 - Exit code 1 + `SMOKE TEST FAILED` — build or runtime error occurred
@@ -170,7 +181,7 @@ Signals in the output:
 - `[CONSOLE.ERROR]` / `[CONSOLE.WARN]` — intercepted console output
 - `[REACT ERROR]` — ErrorBoundary caught a render crash (fatal)
 
-Use `make dev` for interactive development; use `make smoke` for automated validation.
+For Rust-only changes (engine, calc, models), `make test` is a fast validation path. Use `make smoke` for frontend or full-stack changes. Never use `make dev` (interactive, requires manual exit).
 
 ## Known Quirks
 

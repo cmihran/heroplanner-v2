@@ -1,4 +1,4 @@
-.PHONY: dev frontend build lint typecheck rustcheck smoke migrate clean install \
+.PHONY: dev frontend build lint typecheck rustcheck test test-all smoke migrate clean install \
        upscale upscale-dat upscale-tta upscale-list upscale-activate upscale-restore
 
 # Development
@@ -22,9 +22,15 @@ typecheck:            ## TypeScript type check
 rustcheck:            ## Rust cargo check
 	cd src-tauri && cargo check
 
+test:                 ## Run Rust unit tests (no DB required)
+	cd src-tauri && cargo test
+
+test-all:             ## Run all Rust tests including DB integration tests
+	cd src-tauri && cargo test -- --include-ignored
+
 check: lint typecheck rustcheck  ## Run all checks
 
-smoke:                ## Smoke test: start app, wait for [READY], exit
+smoke: test-all       ## Run all tests then smoke test the app
 	./scripts/smoke-test.sh
 
 sync:                 ## Sync project to Windows (C:\dev\heroplanner-v2)

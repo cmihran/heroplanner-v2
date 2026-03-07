@@ -384,3 +384,102 @@ fn empty_stats() -> TotalStatsResult {
         end_per_sec: 0.0,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apply_ed_zone1_full_value() {
+        // 0..0.40 returns raw value
+        assert!((apply_ed(0.0) - 0.0).abs() < 1e-10);
+        assert!((apply_ed(0.20) - 0.20).abs() < 1e-10);
+        assert!((apply_ed(0.40) - 0.40).abs() < 1e-10);
+    }
+
+    #[test]
+    fn apply_ed_zone2_diminished() {
+        // 0.40..0.70 at 60% efficiency
+        // apply_ed(0.50) = 0.40 + (0.10 * 0.60) = 0.46
+        assert!((apply_ed(0.50) - 0.46).abs() < 1e-10);
+        // apply_ed(0.70) = 0.40 + (0.30 * 0.60) = 0.58
+        assert!((apply_ed(0.70) - 0.58).abs() < 1e-10);
+    }
+
+    #[test]
+    fn apply_ed_zone3_heavily_diminished() {
+        // >0.70 at 10% efficiency
+        // apply_ed(0.80) = 0.40 + 0.18 + (0.10 * 0.10) = 0.59
+        assert!((apply_ed(0.80) - 0.59).abs() < 1e-10);
+        // apply_ed(1.00) = 0.40 + 0.18 + (0.30 * 0.10) = 0.61
+        assert!((apply_ed(1.00) - 0.61).abs() < 1e-10);
+    }
+
+    #[test]
+    fn apply_ed_boundary_continuity() {
+        // Values just below and at boundaries should be close
+        let at_40 = apply_ed(0.40);
+        let just_above_40 = apply_ed(0.40 + 1e-12);
+        assert!((at_40 - just_above_40).abs() < 1e-9);
+
+        let at_70 = apply_ed(0.70);
+        let just_above_70 = apply_ed(0.70 + 1e-12);
+        assert!((at_70 - just_above_70).abs() < 1e-9);
+    }
+
+    #[test]
+    fn apply_ed_monotonically_increasing() {
+        let mut prev = apply_ed(0.0);
+        for i in 1..=100 {
+            let raw = i as f64 * 0.01;
+            let ed = apply_ed(raw);
+            assert!(ed >= prev, "ED not monotonic at raw={}", raw);
+            prev = ed;
+        }
+    }
+
+    #[test]
+    fn compute_enhancement_strengths_empty_input() {
+        let game_data = GameData {
+            archetype_tables: HashMap::new(),
+            archetype_stats: HashMap::new(),
+            archetype_ids: HashMap::new(),
+            enhancement_effects: HashMap::new(),
+            set_bonus_data: HashMap::new(),
+            power_stat_data: HashMap::new(),
+            power_metadata: HashMap::new(),
+            boost_metadata: HashMap::new(),
+        };
+        let result = compute_enhancement_strengths(&game_data, 1, &[], 49);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn strengths_to_display_formatting() {
+        let mut strengths = HashMap::new();
+        strengths.insert("Smashing_Dmg".to_string(), 0.40);
+        let display = strengths_to_display(&strengths);
+        assert_eq!(display.len(), 1);
+        assert_eq!(display[0].display_attrib, "Smashing");
+        assert_eq!(display[0].display_strength, "40.0%");
+        assert!((display[0].strength - 0.40).abs() < 1e-10);
+    }
+
+    #[test]
+    fn calculate_total_stats_unknown_archetype() {
+        let game_data = GameData {
+            archetype_tables: HashMap::new(),
+            archetype_stats: HashMap::new(),
+            archetype_ids: HashMap::new(),
+            enhancement_effects: HashMap::new(),
+            set_bonus_data: HashMap::new(),
+            power_stat_data: HashMap::new(),
+            power_metadata: HashMap::new(),
+            boost_metadata: HashMap::new(),
+        };
+        let result = calculate_total_stats(&game_data, 999, 49, &[], &HashMap::new(), &[]);
+        assert!(result.combined_stats.is_empty());
+        assert_eq!(result.base_hp, 0.0);
+        assert_eq!(result.base_end, 0.0);
+    }
+}
