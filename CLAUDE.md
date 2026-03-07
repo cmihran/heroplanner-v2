@@ -157,8 +157,12 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 
 ## Agent Validation Protocol
 
-After making ANY frontend or backend change, run `make dev` and watch the terminal output. The app self-reports its health:
+After making ANY frontend or backend change, run `make smoke` to verify the app starts cleanly. It launches the full app, waits for `[READY]` or a fatal error, then kills everything and exits:
 
+- Exit code 0 + `SMOKE TEST PASSED` — app compiled and rendered successfully
+- Exit code 1 + `SMOKE TEST FAILED` — build or runtime error occurred
+
+Signals in the output:
 - `[READY]` — app rendered successfully (appears after React mounts)
 - `[FRONTEND ERROR]` — fatal JS error (process exits with code 1)
 - `[FRONTEND WARNING]` — non-fatal diagnostic (app stays alive)
@@ -166,7 +170,7 @@ After making ANY frontend or backend change, run `make dev` and watch the termin
 - `[CONSOLE.ERROR]` / `[CONSOLE.WARN]` — intercepted console output
 - `[REACT ERROR]` — ErrorBoundary caught a render crash (fatal)
 
-If the app crashes, the process exits immediately with a clear error message. No blank windows, no silent failures. The agent does not need a separate smoke test command — just run `make dev` and check the output.
+Use `make dev` for interactive development; use `make smoke` for automated validation.
 
 ## Known Quirks
 

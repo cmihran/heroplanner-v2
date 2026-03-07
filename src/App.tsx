@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Toaster } from 'sonner';
@@ -31,8 +31,12 @@ function App() {
     loadInitialData();
   }, [loadInitialData]);
 
+  const readySent = useRef(false);
   useEffect(() => {
-    if (isTauri) invoke('log_frontend_ready');
+    if (isTauri && !readySent.current) {
+      readySent.current = true;
+      invoke('log_frontend_ready');
+    }
   }, []);
 
   // Intercept OS-level window close (Alt+F4, taskbar close) to warn about unsaved changes

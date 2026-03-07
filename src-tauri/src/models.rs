@@ -15,12 +15,6 @@ pub struct Archetype {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Origin {
-    pub name: String,
-    pub icon: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PowersetCategory {
     pub powerset_name: String,
     pub display_name: String,
