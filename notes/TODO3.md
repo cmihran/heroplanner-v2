@@ -10,11 +10,6 @@ i cant see damage
 not all enhancements dont seem to affect powers
 
 
-add mouseover tooltips for almost all buttons
-
-
-
-
 boosting an enhancement should show the strength go from ~42% to ~53%
 
 
@@ -32,5 +27,3 @@ if i mouse over an enhancement in the first slot, i should see the red minus ico
 total stats should show +x% for damage and tohit
 
 
-
-add unit / integration tests?
