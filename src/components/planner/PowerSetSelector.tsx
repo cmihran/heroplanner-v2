@@ -7,6 +7,8 @@ import type { PowersetCategory, PowerSummary } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { PowerHoverCard } from './PowerHoverCard';
 
+const EMPTY_OBJ: Record<string, number> = {};
+
 interface PowerSetSelectorProps {
   label: string;
   choices: PowersetCategory[];
@@ -19,7 +21,7 @@ export function PowerSetSelector({ label, choices, powers, slot, selectedValue }
   const selectPowerset = useHeroStore((s) => s.selectPowerset);
   const clearPowerset = useHeroStore((s) => s.clearPowerset);
   const togglePower = useHeroStore((s) => s.togglePower);
-  const powerNameToLevel = useHeroStore((s) => s.powerNameToLevel);
+  const powerNameToLevel = useHeroStore((s) => s.buildView?.powerNameToLevel) ?? EMPTY_OBJ;
 
   return (
     <div className="mb-3">
@@ -34,7 +36,7 @@ export function PowerSetSelector({ label, choices, powers, slot, selectedValue }
             if (ps) selectPowerset(slot, ps);
           }}
         >
-          <SelectTrigger className="mb-1 relative z-20 pr-3 bg-coh-dark/80 border-coh-secondary/60 hover:border-coh-gradient1/60 hover:shadow-[0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200">
+          <SelectTrigger className="mb-1 pr-4 bg-coh-dark/80 border-coh-secondary/60 hover:border-coh-gradient1/60 hover:shadow-[0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200">
             <SelectValue placeholder={`Select ${label}`} />
           </SelectTrigger>
           <SelectContent>
@@ -67,7 +69,7 @@ export function PowerSetSelector({ label, choices, powers, slot, selectedValue }
               return (
                 <button
                   key={power.full_name}
-                  onClick={() => togglePower(power)}
+                  onClick={() => togglePower(power.full_name)}
                   className={cn(
                     'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-all duration-150',
                     isSelected

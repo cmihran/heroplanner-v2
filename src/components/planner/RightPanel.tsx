@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useHeroStore, LEVEL_SLOTS } from '@/stores/heroStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,14 +8,21 @@ import { InherentsTab } from './InherentsTab';
 import { IncarnatesTab } from './IncarnatesTab';
 import { AccoladesTab } from './AccoladesTab';
 import { DetailPane } from './DetailPane';
+import type { PowerView } from '@/types/models';
 
 export function RightPanel() {
-  const levelToPower = useHeroStore((s) => s.levelToPower);
-  const totalSlotsAdded = useHeroStore((s) => s.totalSlotsAdded);
+  const buildView = useHeroStore((s) => s.buildView);
   const detailPaneTarget = useHeroStore((s) => s.detailPaneTarget);
   const detailPaneMinimized = useHeroStore((s) => s.detailPaneMinimized);
 
-  const slotsRemaining = 67 - totalSlotsAdded;
+  const levelToPower = useMemo(() => {
+    const map: Record<number, PowerView | null> = {};
+    for (const l of LEVEL_SLOTS) map[l] = null;
+    for (const pv of buildView?.powers ?? []) map[pv.level] = pv;
+    return map;
+  }, [buildView?.powers]);
+
+  const slotsRemaining = (buildView?.maxTotalSlots ?? 67) - (buildView?.totalSlotsAdded ?? 0);
   const showDetailSplit = detailPaneTarget !== null && !detailPaneMinimized;
   const showMinimizedBar = detailPaneMinimized;
 

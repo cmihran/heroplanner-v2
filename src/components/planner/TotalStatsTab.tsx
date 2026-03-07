@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useHeroStore } from '@/stores/heroStore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronRight, Shield, Blocks, Crosshair, Footprints, ShieldCheck, Heart, Settings, Hammer, Sword, Flame, Snowflake, Zap, Skull, Brain, FlaskConical, Swords, Target, Expand } from 'lucide-react';
@@ -402,36 +402,12 @@ function CategorySection({ category, entries, damageEntries, capMap }: { categor
 
 export function TotalStatsTab() {
   const archetype = useHeroStore((s) => s.archetype);
-  const levelToPower = useHeroStore((s) => s.levelToPower);
-  const totalStatsResult = useHeroStore((s) => s.totalStatsResult);
-  const totalStatsLoading = useHeroStore((s) => s.totalStatsLoading);
-  const refreshTotalStats = useHeroStore((s) => s.refreshTotalStats);
-  const inherentSlots = useHeroStore((s) => s.inherentSlots);
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      refreshTotalStats();
-    }, 300);
-    return () => {
-      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-    };
-  }, [levelToPower, inherentSlots, refreshTotalStats]);
+  const totalStatsResult = useHeroStore((s) => s.buildView)?.stats ?? null;
 
   if (!archetype) {
     return (
       <div className="flex items-center justify-center h-full text-slate-500 text-sm">
         Select an archetype to see stats
-      </div>
-    );
-  }
-
-  if (totalStatsLoading && !totalStatsResult) {
-    return (
-      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
-        Calculating...
       </div>
     );
   }

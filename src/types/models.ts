@@ -102,17 +102,6 @@ export interface PowerEffectsResult {
   enhancedEndurance: number | null;
 }
 
-export interface SlottedBoost {
-  boostKey: string;
-  icon: string | null;
-  computedName: string | null;
-  setName: string | null;
-  setGroupName: string | null;
-  level: number | null;
-  isAttuned: boolean;
-  boostLevel: number;
-}
-
 export interface BoostSetSummary {
   name: string;
   display_name: string;
@@ -286,4 +275,68 @@ export interface TotalStatsResult {
   baseEnd: number;
   effectiveEnd: number;
   endPerSec: number;
+}
+
+// --- Engine BuildView types ---
+
+export interface BuildView {
+  heroName: string;
+  archetypeId: number;
+  archetypeName: string;
+  originName: string;
+  selectedPrimary: string | null;
+  selectedSecondary: string | null;
+  selectedPool1: string | null;
+  selectedPool2: string | null;
+  selectedPool3: string | null;
+  selectedPool4: string | null;
+  powers: PowerView[];
+  inherentSlots: Record<string, InherentSlotView>;
+  totalSlotsAdded: number;
+  maxTotalSlots: number;
+  powerNameToLevel: Record<string, number>;
+  stats: TotalStatsResult;
+  perPowerStrengths: Record<string, EnhancementStrength[]>;
+  isDirty: boolean;
+}
+
+export interface PowerView {
+  level: number;
+  powerFullName: string;
+  displayName: string;
+  displayShortHelp: string | null;
+  icon: string;
+  powerType: string;
+  availableLevel: number;
+  maxBoosts: number;
+  hasSelfEffects: boolean;
+  numSlots: number;
+  boosts: Record<number, BoostView>;
+  isActive: boolean;
+}
+
+export interface BoostView {
+  boostKey: string;
+  icon: string | null;
+  computedName: string | null;
+  setName: string | null;
+  setGroupName: string | null;
+  level: number | null;
+  isAttuned: boolean;
+  boostLevel: number;
+}
+
+export interface InherentSlotView {
+  numSlots: number;
+  boosts: Record<number, BoostView>;
+  isActive: boolean;
+}
+
+export interface SetBoostInput {
+  boostKey: string;
+  setName: string | null;
+  setGroupName: string | null;
+  level: number | null;
+  isAttuned: boolean;
+  boostLevel: number;
 }

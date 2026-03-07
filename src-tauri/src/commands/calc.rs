@@ -43,7 +43,7 @@ fn compute_enhancement_strengths(
             char_level
         } else {
             let base = enh.level.unwrap_or(50) + enh.boost_level;
-            base.min(50).saturating_sub(1).max(0) as usize
+            base.min(53).saturating_sub(1).max(0) as usize
         };
 
         // Get enhancement effect templates (attribs, table, scale)

@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { useHeroStore } from '@/stores/heroStore';
+import { useHeroStore, toSetBoostInput } from '@/stores/heroStore';
 import { api } from '@/lib/api';
-import { imageUrl } from '@/lib/images';
-import { IO_ICONS } from '@/lib/enhancement-data';
 import { BoostSetBrowser } from './BoostSetBrowser';
-import type { PowerDetail, EnhancementStrength, SlottedBoost } from '@/types/models';
+import type { PowerDetail, EnhancementStrength, BoostView } from '@/types/models';
 
 interface EnhancementPickerProps {
   powerFullName: string;
@@ -21,17 +19,19 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
   const removeBoostFromSlot = useHeroStore((s) => s.removeBoostFromSlot);
   const setInherentBoost = useHeroStore((s) => s.setInherentBoost);
   const removeInherentBoost = useHeroStore((s) => s.removeInherentBoost);
-  const inherentSlots = useHeroStore((s) => s.inherentSlots);
-  const powerNameToLevel = useHeroStore((s) => s.powerNameToLevel);
-  const levelToPower = useHeroStore((s) => s.levelToPower);
+  const buildView = useHeroStore((s) => s.buildView);
   const archetype = useHeroStore((s) => s.archetype);
 
   const [detail, setDetail] = useState<PowerDetail | null>(null);
   const [ioStrengths, setIoStrengths] = useState<Record<string, EnhancementStrength[]>>({});
+  const [currentStrengths, setCurrentStrengths] = useState<EnhancementStrength[] | null>(null);
 
-  const currentBoost = isInherent
-    ? (inherentSlots[powerFullName]?.boosts[slotIndex] ?? null)
-    : (() => { const level = powerNameToLevel[powerFullName]; const selected = level !== undefined ? levelToPower[level] : null; return selected?.boosts[slotIndex] ?? null; })();
+  const currentBoost: BoostView | null = (() => {
+    if (!buildView) return null;
+    if (isInherent) return buildView.inherentSlots[powerFullName]?.boosts[slotIndex] ?? null;
+    const pv = buildView.powers.find((p) => p.powerFullName === powerFullName);
+    return pv?.boosts[slotIndex] ?? null;
+  })();
 
   useEffect(() => {
     fetchPowerDetail(powerFullName).then(setDetail);
@@ -55,15 +55,23 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     return () => { cancelled = true; };
   }, [detail, archetype]);
 
-  const slotBoost = isInherent ? setInherentBoost : (_p: string, _i: number, b: SlottedBoost) => setBoostInSlot(_p, _i, b);
+  // Fetch enhancement strengths for the currently slotted boost (reacts to level/boostLevel/attuned changes)
+  useEffect(() => {
+    if (!currentBoost || !archetype) { setCurrentStrengths(null); return; }
+    let cancelled = false;
+    const effectiveLevel = currentBoost.isAttuned ? 49 : Math.min(53, (currentBoost.level ?? 50) + (currentBoost.boostLevel ?? 0)) - 1;
+    api.getEnhancementValues(archetype.id, currentBoost.boostKey, effectiveLevel, currentBoost.isAttuned)
+      .then((s) => { if (!cancelled) setCurrentStrengths(s); })
+      .catch(() => { if (!cancelled) setCurrentStrengths(null); });
+    return () => { cancelled = true; };
+  }, [currentBoost?.boostKey, currentBoost?.level, currentBoost?.boostLevel, currentBoost?.isAttuned, archetype]);
+
+  const slotBoost = isInherent ? setInherentBoost : setBoostInSlot;
   const clearBoost = isInherent ? removeInherentBoost : removeBoostFromSlot;
 
   const handleIOClick = (boostName: string) => {
-    const icon = IO_ICONS[boostName] ?? null;
     slotBoost(powerFullName, slotIndex, {
       boostKey: boostName,
-      icon,
-      computedName: boostName,
       setName: null,
       setGroupName: null,
       level: 50,
@@ -89,8 +97,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     }
   }, [currentBoost?.setName, fetchBoostSetDetail]);
 
-  const isArchetypeSet = currentBoost?.setGroupName === 'Archetype';
-  const isVeryRare = currentBoost?.setGroupName === 'Very_Rare';
+  const isArchetypeSet = currentBoost?.setGroupName?.includes('Archetype') ?? false;
 
   const handleLevelChange = (newLevel: number) => {
     if (!currentBoost) return;
@@ -99,7 +106,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     if (boostSetInfo) {
       clamped = Math.max(boostSetInfo.min_level, Math.min(boostSetInfo.max_level, clamped));
     }
-    slotBoost(powerFullName, slotIndex, { ...currentBoost, level: clamped, isAttuned: false, boostLevel: currentBoost.boostLevel });
+    slotBoost(powerFullName, slotIndex, { ...toSetBoostInput(currentBoost), level: clamped, isAttuned: false, boostLevel: currentBoost.boostLevel });
   };
 
   const handleAttunedToggle = () => {
@@ -109,7 +116,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     const nowAttuned = !currentBoost.isAttuned;
     const defaultLevel = boostSetInfo?.max_level ?? 50;
     slotBoost(powerFullName, slotIndex, {
-      ...currentBoost,
+      ...toSetBoostInput(currentBoost),
       isAttuned: nowAttuned,
       level: nowAttuned ? null : defaultLevel,
       boostLevel: nowAttuned ? 0 : currentBoost.boostLevel,
@@ -130,7 +137,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
           </Button>
         )}
       </div>
-      {currentBoost && (
+      {currentBoost && (<>
         <div className="px-3 pb-2 flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <label className="text-[0.625rem] text-muted-foreground">Lv</label>
@@ -139,7 +146,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
               min={boostSetInfo?.min_level ?? 1}
               max={boostSetInfo?.max_level ?? 50}
               value={currentBoost.isAttuned ? '' : (currentBoost.level ?? 50)}
-              disabled={currentBoost.isAttuned || isVeryRare}
+              disabled={currentBoost.isAttuned}
               onChange={(e) => handleLevelChange(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
               className="w-12 h-6 text-xs text-center bg-coh-dark border border-border/40 rounded px-1 disabled:opacity-40"
             />
@@ -161,13 +168,13 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
               Attuned
             </span>
           )}
-          {/* IO Boosters: only for non-attuned set enhancements */}
-          {currentBoost.setName && !currentBoost.isAttuned && (
+          {/* IO Boosters: any non-attuned IO enhancement */}
+          {!currentBoost.isAttuned && (
             <div className="flex items-center gap-1">
               <button
                 onClick={() => {
                   const newLevel = Math.max(0, currentBoost.boostLevel - 1);
-                  slotBoost(powerFullName, slotIndex, { ...currentBoost, boostLevel: newLevel });
+                  slotBoost(powerFullName, slotIndex, { ...toSetBoostInput(currentBoost), boostLevel: newLevel });
                 }}
                 disabled={currentBoost.boostLevel <= 0}
                 className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
@@ -180,7 +187,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
               <button
                 onClick={() => {
                   const newLevel = Math.min(5, currentBoost.boostLevel + 1);
-                  slotBoost(powerFullName, slotIndex, { ...currentBoost, boostLevel: newLevel });
+                  slotBoost(powerFullName, slotIndex, { ...toSetBoostInput(currentBoost), boostLevel: newLevel });
                 }}
                 disabled={currentBoost.boostLevel >= 5}
                 className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
@@ -190,7 +197,17 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
             </div>
           )}
         </div>
-      )}
+        {currentStrengths && currentStrengths.length > 0 && (
+          <div className="px-3 pb-2 flex flex-wrap gap-x-3 gap-y-0.5">
+            {currentStrengths.map((s, i) => (
+              <span key={i} className="text-[0.625rem]">
+                <span className="text-muted-foreground">{s.displayAttrib}:</span>{' '}
+                <span className="text-coh-info">{s.displayStrength}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </>)}
       <Tabs defaultValue="io" className="px-3 pb-3">
         <TabsList className="w-full">
           <TabsTrigger value="io" className="flex-1 text-xs">IO</TabsTrigger>
@@ -209,9 +226,6 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
                   onClick={() => handleIOClick(boost)}
                   className="flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-coh-secondary/30 transition-colors text-left"
                 >
-                  {IO_ICONS[boost] && (
-                    <img src={imageUrl(IO_ICONS[boost])} alt="" className="w-4 h-4" />
-                  )}
                   <span className="flex-1">{boost}</span>
                   {pctLabel && (
                     <span className="text-coh-info/70 text-[0.625rem] shrink-0">{pctLabel}</span>

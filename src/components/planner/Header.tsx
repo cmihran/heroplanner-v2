@@ -11,7 +11,7 @@ const DONATE_URL = 'https://ko-fi.com/heroplanner';
 
 export function Header() {
   const archetype = useHeroStore((s) => s.archetype);
-  const isDirty = useHeroStore((s) => s.isDirty);
+  const isDirty = useHeroStore((s) => s.buildView?.isDirty ?? false);
   const saveBuild = useHeroStore((s) => s.saveBuild);
   const saveAsNewBuild = useHeroStore((s) => s.saveAsNewBuild);
   const loadBuild = useHeroStore((s) => s.loadBuild);
@@ -113,12 +113,12 @@ export function Header() {
         <button
           className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-red-600 transition-colors"
           onClick={async () => {
-            const dirty = useHeroStore.getState().isDirty;
+            const dirty = useHeroStore.getState().buildView?.isDirty ?? false;
             if (dirty) {
               const ok = await confirm('Unsaved Changes', 'You have unsaved changes. Close without saving?', 'Close');
               if (!ok) return;
             }
-            appWindow.destroy();
+            await appWindow.destroy();
           }}
           title="Close"
         >

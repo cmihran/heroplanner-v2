@@ -1,13 +1,14 @@
 import { useState, useCallback, useRef, type DragEvent, type MouseEvent } from 'react';
-import { useHeroStore, type SelectedPower } from '@/stores/heroStore';
+import { useHeroStore } from '@/stores/heroStore';
 import { imageUrl } from '@/lib/images';
 import { Check, Plus } from 'lucide-react';
 import { EnhancementSlot } from './EnhancementSlot';
 import { PowerHoverCard } from './PowerHoverCard';
+import type { PowerView } from '@/types/models';
 
 interface PowerSlotCardProps {
   level: number;
-  selectedPower: SelectedPower | null;
+  selectedPower: PowerView | null;
 }
 
 export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
@@ -34,7 +35,7 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
     if (e.button !== 0) return;
     if (!selectedPower) return;
 
-    const { numSlots } = selectedPower;
+    const { numSlots, maxBoosts, powerFullName } = selectedPower;
     const startX = e.clientX;
     let activated = false;
 
@@ -44,46 +45,39 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
       lastThresholdSlots: numSlots,
     };
 
-    const SLOT_WIDTH_PX = 44; // ~2.75rem at 16px base, approximate threshold
-    const DRAG_THRESHOLD = 8;  // px before we consider it a drag (not a click)
+    const SLOT_WIDTH_PX = 44;
+    const DRAG_THRESHOLD = 8;
 
     const handleMouseMove = (ev: globalThis.MouseEvent) => {
       const ref = slotDragRef.current;
-      if (!ref || !selectedPower) return;
+      if (!ref) return;
 
       const deltaX = ev.clientX - ref.startX;
 
-      // Don't activate until the mouse has moved enough to distinguish from a click
       if (!activated) {
         if (Math.abs(deltaX) < DRAG_THRESHOLD) return;
         activated = true;
         setSlotDragging(true);
       }
 
-      // Compute how many slots to change based on distance from start
       const slotDelta = Math.round(deltaX / SLOT_WIDTH_PX);
       const targetSlots = ref.startSlots + slotDelta;
-
-      // Clamp: at least 1, at most max_boosts
-      const clampedTarget = Math.max(1, Math.min(selectedPower.power.max_boosts, targetSlots));
+      const clampedTarget = Math.max(1, Math.min(maxBoosts, targetSlots));
 
       if (clampedTarget !== ref.lastThresholdSlots) {
         if (clampedTarget > ref.lastThresholdSlots) {
-          // Adding slots
           const toAdd = clampedTarget - ref.lastThresholdSlots;
           for (let i = 0; i < toAdd; i++) {
             if (canAddMore()) {
-              addSlot(selectedPower.power.full_name);
+              addSlot(powerFullName);
             }
           }
         } else {
-          // Removing slots
           const toRemove = ref.lastThresholdSlots - clampedTarget;
           for (let i = 0; i < toRemove; i++) {
-            // Remove from end; current numSlots may have changed
             const currentSlots = ref.lastThresholdSlots - i;
             if (currentSlots > 1) {
-              removeSlotAt(selectedPower.power.full_name, currentSlots - 1);
+              removeSlotAt(powerFullName, currentSlots - 1);
             }
           }
         }
@@ -145,16 +139,14 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
     );
   }
 
-  const { power, numSlots, isActive } = selectedPower;
-  const showToggle = power.has_self_effects;
-
-  const hasSlots = power.max_boosts > 0;
+  const { powerFullName, displayName, displayShortHelp, icon, maxBoosts, hasSelfEffects, numSlots, isActive } = selectedPower;
+  const showToggle = hasSelfEffects;
+  const hasSlots = maxBoosts > 0;
 
   return (
     <div
       className={`group transition-colors ${!isActive && showToggle ? 'opacity-50 saturate-50' : ''}`}
       {...dragProps}
-      onMouseEnter={() => setDetailPaneTarget({ type: 'power', key: power.full_name })}
       onContextMenu={(e) => { e.preventDefault(); toggleDetailPaneLock(); }}
     >
       {/* Power info bar — pill shape with protruding icon, draggable for reordering */}
@@ -164,20 +156,23 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
         onDragStart={handleDragStart}
       >
         {/* Pill bar */}
-        <div className={`rounded-full border bg-gradient-to-r from-coh-gradient2/90 via-coh-gradient2/60 to-coh-gradient2/40 shadow-[0_0.125rem_0.25rem_rgba(0,0,0,0.3)] ${dragOver ? 'border-coh-gradient1/60 shadow-[0_0_0.5rem_rgba(53,123,215,0.2)]' : 'border-coh-secondary/50'}`}>
+        <div
+          className={`rounded-full border bg-gradient-to-r from-coh-gradient2/90 via-coh-gradient2/60 to-coh-gradient2/40 shadow-[0_0.125rem_0.25rem_rgba(0,0,0,0.3)] ${dragOver ? 'border-coh-gradient1/60 shadow-[0_0_0.5rem_rgba(53,123,215,0.2)]' : 'border-coh-secondary/50'}`}
+          onMouseOver={() => setDetailPaneTarget({ type: 'power', key: powerFullName })}
+        >
           <div className="flex items-center gap-2 pl-8 pr-3 pt-1 pb-2 bg-gradient-to-b from-white/10 via-transparent to-black/30 rounded-full">
-            <PowerHoverCard powerFullName={power.full_name}>
+            <PowerHoverCard powerFullName={powerFullName}>
               <div className="min-w-0 flex-1 cursor-help">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-hero text-sm tracking-wide truncate">{power.display_name}</span>
+                  <span className="font-hero text-sm tracking-wide truncate">{displayName}</span>
                   <span className="text-[0.625rem] text-muted-foreground shrink-0">Lv{level}</span>
                 </div>
-                <p className="text-[0.625rem] leading-tight text-muted-foreground/70 line-clamp-2 min-h-[2.5em]">{power.display_short_help || '\u00A0'}</p>
+                <p className="text-[0.625rem] leading-tight text-muted-foreground/70 line-clamp-2 min-h-[2.5em]">{displayShortHelp || '\u00A0'}</p>
               </div>
             </PowerHoverCard>
             {showToggle && (
               <button
-                onClick={(e) => { e.stopPropagation(); togglePowerActive(power.full_name); }}
+                onClick={(e) => { e.stopPropagation(); togglePowerActive(powerFullName); }}
                 className={`ml-auto w-5 h-5 rounded-full shrink-0 border flex items-center justify-center transition-all duration-200 ${
                   isActive
                     ? 'bg-green-600 border-green-400 shadow-[0_0_0.375rem_rgba(34,197,94,0.4),inset_0_0.0625rem_0_rgba(255,255,255,0.2)]'
@@ -193,7 +188,7 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
 
         {/* Power icon — overlaps left edge of pill, centered vertically */}
         <img
-          src={imageUrl(power.icon)}
+          src={imageUrl(icon)}
           alt=""
           draggable={false}
           className="absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full cursor-grab ring-2 ring-coh-gradient1/40 shadow-[0_0_0.5rem_rgba(0,0,0,0.6),0_0_0.75rem_rgba(53,123,215,0.15)]"
@@ -210,18 +205,18 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
           {Array.from({ length: numSlots }, (_, i) => (
             <EnhancementSlot
               key={i}
-              powerFullName={power.full_name}
+              powerFullName={powerFullName}
               slotIndex={i}
               boost={selectedPower.boosts[i] || null}
               isEmpty={false}
-              onRemove={() => removeSlotAt(power.full_name, i)}
+              onRemove={() => removeSlotAt(powerFullName, i)}
               canRemove={numSlots > 1}
             />
           ))}
           {/* Ghost add button — visible on hover or during slot drag */}
-          {numSlots < power.max_boosts && canAddMore() && (
+          {numSlots < maxBoosts && canAddMore() && (
             <button
-              onClick={() => addSlot(power.full_name)}
+              onClick={() => addSlot(powerFullName)}
               className={`w-[2.5rem] h-[2.5rem] rounded-full border-2 border-dashed flex items-center justify-center transition-opacity hover:border-coh-info/60 hover:bg-coh-secondary/20 ${
                 slotDragging
                   ? 'opacity-100 border-coh-info/50 bg-coh-info/10 animate-pulse'

@@ -8,7 +8,7 @@ export function HeroInfo() {
   const origins = useHeroStore((s) => s.origins);
   const archetype = useHeroStore((s) => s.archetype);
   const origin = useHeroStore((s) => s.origin);
-  const heroName = useHeroStore((s) => s.heroName);
+  const heroName = useHeroStore((s) => s.localHeroName);
   const selectArchetype = useHeroStore((s) => s.selectArchetype);
   const selectOrigin = useHeroStore((s) => s.selectOrigin);
   const setHeroName = useHeroStore((s) => s.setHeroName);

@@ -10,12 +10,12 @@ export function LeftPanel() {
   const primarySetChoices = useHeroStore((s) => s.primarySetChoices);
   const secondarySetChoices = useHeroStore((s) => s.secondarySetChoices);
   const powerPoolChoices = useHeroStore((s) => s.powerPoolChoices);
-  const selectedPrimary = useHeroStore((s) => s.selectedPrimary);
-  const selectedSecondary = useHeroStore((s) => s.selectedSecondary);
-  const selectedPool1 = useHeroStore((s) => s.selectedPool1);
-  const selectedPool2 = useHeroStore((s) => s.selectedPool2);
-  const selectedPool3 = useHeroStore((s) => s.selectedPool3);
-  const selectedPool4 = useHeroStore((s) => s.selectedPool4);
+  const selectedPrimary = useHeroStore((s) => s.buildView?.selectedPrimary ?? null);
+  const selectedSecondary = useHeroStore((s) => s.buildView?.selectedSecondary ?? null);
+  const selectedPool1 = useHeroStore((s) => s.buildView?.selectedPool1 ?? null);
+  const selectedPool2 = useHeroStore((s) => s.buildView?.selectedPool2 ?? null);
+  const selectedPool3 = useHeroStore((s) => s.buildView?.selectedPool3 ?? null);
+  const selectedPool4 = useHeroStore((s) => s.buildView?.selectedPool4 ?? null);
   const primaryPowers = useHeroStore((s) => s.primaryPowers);
   const secondaryPowers = useHeroStore((s) => s.secondaryPowers);
   const pool1Powers = useHeroStore((s) => s.pool1Powers);

@@ -5,7 +5,9 @@ import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
 import { Plus, Check } from 'lucide-react';
 import { EnhancementSlot } from './EnhancementSlot';
-import type { InherentPowerInfo, InherentPowersResult } from '@/types/models';
+import type { InherentPowerInfo, InherentPowersResult, InherentSlotView } from '@/types/models';
+
+const EMPTY_OBJ: Record<string, InherentSlotView> = {};
 
 function InherentPowerCard({ power, highlight }: { power: InherentPowerInfo; highlight?: boolean }) {
   const [expanded, setExpanded] = useState(false);
@@ -56,7 +58,7 @@ function InherentPowerCard({ power, highlight }: { power: InherentPowerInfo; hig
 
 function SlottableInherentCard({ power }: { power: InherentPowerInfo }) {
   const [expanded, setExpanded] = useState(false);
-  const inherentSlots = useHeroStore((s) => s.inherentSlots);
+  const inherentSlots = useHeroStore((s) => s.buildView?.inherentSlots) ?? EMPTY_OBJ;
   const addInherentSlot = useHeroStore((s) => s.addInherentSlot);
   const removeInherentSlotAt = useHeroStore((s) => s.removeInherentSlotAt);
   const toggleInherentActive = useHeroStore((s) => s.toggleInherentActive);

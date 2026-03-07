@@ -13,10 +13,9 @@ function groupByPower(bonuses: ActiveSetBonus[]): Record<string, ActiveSetBonus[
 }
 
 export function SetBonusesTab() {
-  const totalStatsResult = useHeroStore((s) => s.totalStatsResult);
-  const levelToPower = useHeroStore((s) => s.levelToPower);
+  const buildView = useHeroStore((s) => s.buildView);
 
-  const activeBonuses = totalStatsResult?.activeBonuses ?? [];
+  const activeBonuses = buildView?.stats?.activeBonuses ?? [];
 
   if (activeBonuses.length === 0) {
     return (
@@ -32,8 +31,8 @@ export function SetBonusesTab() {
 
   // Build power display name map
   const powerDisplayNames: Record<string, string> = {};
-  for (const sp of Object.values(levelToPower)) {
-    if (sp) powerDisplayNames[sp.power.full_name] = sp.power.display_name;
+  for (const pv of buildView?.powers ?? []) {
+    powerDisplayNames[pv.powerFullName] = pv.displayName;
   }
 
   return (

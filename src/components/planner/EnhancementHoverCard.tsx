@@ -4,10 +4,10 @@ import { useHeroStore } from '@/stores/heroStore';
 import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
 import { condenseAttribs } from '@/lib/utils';
-import type { SlottedBoost, BoostSetDetail, EnhancementStrength } from '@/types/models';
+import type { BoostView, BoostSetDetail, EnhancementStrength } from '@/types/models';
 
 interface EnhancementHoverCardProps {
-  boost: SlottedBoost;
+  boost: BoostView;
   children: React.ReactNode;
   side?: 'top' | 'right' | 'bottom' | 'left';
 }
@@ -35,12 +35,13 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
       }
       // Fetch enhancement strengths on open
       if (open && !strengths && archetype) {
-        api.getEnhancementValues(archetype.id, boost.boostKey, 49, boost.isAttuned)
+        const effectiveLevel = boost.isAttuned ? 49 : Math.min(53, (boost.level ?? 50) + (boost.boostLevel ?? 0)) - 1;
+        api.getEnhancementValues(archetype.id, boost.boostKey, effectiveLevel, boost.isAttuned)
           .then(setStrengths)
           .catch(() => {});
       }
     },
-    [hasSet, setDetail, fetchBoostSetDetail, boost.setName, boost.boostKey, boost.isAttuned, strengths, archetype]
+    [hasSet, setDetail, fetchBoostSetDetail, boost.setName, boost.boostKey, boost.isAttuned, boost.level, boost.boostLevel, strengths, archetype]
   );
 
   const strengthsLabel = strengths?.length
@@ -94,7 +95,7 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
   );
 }
 
-function SetHoverContent({ boost, detail, strengthsLabel }: { boost: SlottedBoost; detail: BoostSetDetail; strengthsLabel: string | null }) {
+function SetHoverContent({ boost, detail, strengthsLabel }: { boost: BoostView; detail: BoostSetDetail; strengthsLabel: string | null }) {
   return (
     <div>
       {/* Enhancement name */}

@@ -36,14 +36,13 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
           const state = useHeroStore.getState();
           if (!state.archetype) return;
           const atId = state.archetype.id;
-          const level = state.powerNameToLevel[powerFullName];
-          const selected = level !== undefined ? state.levelToPower[level] : null;
-          const hasEnhancements = selected && Object.keys(selected.boosts).length > 0;
+          const pv = state.buildView?.powers.find((p) => p.powerFullName === powerFullName) ?? null;
+          const hasEnhancements = pv && Object.keys(pv.boosts).length > 0;
 
           api.calculatePowerEffects(atId, powerFullName, 49, []).then((r) => setBaseEffects(r.effects));
 
           if (hasEnhancements) {
-            const enhs = Object.values(selected.boosts).map((b) => ({
+            const enhs = Object.values(pv.boosts).map((b) => ({
               boostKey: b.boostKey,
               level: b.level,
               isAttuned: b.isAttuned,

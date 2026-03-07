@@ -9,8 +9,7 @@ import type { PowerDetail, CalculatedEffect, BoostSetDetail, EnhancementStrength
 function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
   const archetype = useHeroStore((s) => s.archetype);
   const fetchPowerDetail = useHeroStore((s) => s.fetchPowerDetail);
-  const powerNameToLevel = useHeroStore((s) => s.powerNameToLevel);
-  const levelToPower = useHeroStore((s) => s.levelToPower);
+  const buildView = useHeroStore((s) => s.buildView);
 
   const [detail, setDetail] = useState<PowerDetail | null>(null);
   const [baseEffects, setBaseEffects] = useState<CalculatedEffect[]>([]);
@@ -28,10 +27,10 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
             if (!cancelled) setBaseEffects(result.effects);
           });
 
-          const level = useHeroStore.getState().powerNameToLevel[powerFullName];
-          const selected = level !== undefined ? useHeroStore.getState().levelToPower[level] : null;
-          if (selected && Object.keys(selected.boosts).length > 0) {
-            const enhs = Object.values(selected.boosts).map((b) => ({
+          const bv = useHeroStore.getState().buildView;
+          const pv = bv?.powers.find((p) => p.powerFullName === powerFullName);
+          if (pv && Object.keys(pv.boosts).length > 0) {
+            const enhs = Object.values(pv.boosts).map((b) => ({
               boostKey: b.boostKey,
               level: b.level,
               isAttuned: b.isAttuned,
@@ -53,8 +52,8 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
 
   if (!detail) return <div className="p-3 text-xs text-muted-foreground">Loading...</div>;
 
-  const level = powerNameToLevel[powerFullName];
-  const selected = level !== undefined ? levelToPower[level] : null;
+  const selected = buildView?.powers.find((p) => p.powerFullName === powerFullName) ?? null;
+  const level = selected?.level;
 
   return (
     <div className="p-3 space-y-2">
@@ -120,8 +119,7 @@ function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
 function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; powerName?: string }) {
   const archetype = useHeroStore((s) => s.archetype);
   const fetchBoostSetDetail = useHeroStore((s) => s.fetchBoostSetDetail);
-  const levelToPower = useHeroStore((s) => s.levelToPower);
-  const powerNameToLevel = useHeroStore((s) => s.powerNameToLevel);
+  const buildView = useHeroStore((s) => s.buildView);
 
   const [strengths, setStrengths] = useState<EnhancementStrength[]>([]);
   const [setDetail, setSetDetail] = useState<BoostSetDetail | null>(null);
@@ -130,15 +128,21 @@ function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; p
   let boostSetName: string | null = null;
   let boostIcon: string | null = null;
   let boostName: string | null = null;
-  if (powerName) {
-    const level = powerNameToLevel[powerName];
-    const selected = level !== undefined ? levelToPower[level] : null;
-    if (selected) {
-      const boost = Object.values(selected.boosts).find((b) => b.boostKey === boostKey);
+  let boostIsAttuned = false;
+  let boostEffectiveLevel = 49;
+  if (powerName && buildView) {
+    // Check regular powers first, then inherent slots
+    const pv = buildView.powers.find((p) => p.powerFullName === powerName);
+    const boosts: Record<number, import('@/types/models').BoostView> | undefined = pv?.boosts ?? buildView.inherentSlots[powerName]?.boosts;
+    if (boosts) {
+      const boost = Object.values(boosts).find((b) => b.boostKey === boostKey);
       if (boost) {
         boostSetName = boost.setName;
         boostIcon = boost.icon;
         boostName = boost.computedName;
+        boostIsAttuned = boost.isAttuned;
+        const baseLevel = boost.level ?? 50;
+        boostEffectiveLevel = Math.min(53, baseLevel + (boost.boostLevel ?? 0)) - 1;
       }
     }
   }
@@ -146,7 +150,7 @@ function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; p
   useEffect(() => {
     if (!archetype) return;
     let cancelled = false;
-    api.getEnhancementValues(archetype.id, boostKey, 49, false).then((s) => {
+    api.getEnhancementValues(archetype.id, boostKey, boostEffectiveLevel, boostIsAttuned).then((s) => {
       if (!cancelled) setStrengths(s);
     });
     if (boostSetName) {
@@ -155,7 +159,7 @@ function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; p
       });
     }
     return () => { cancelled = true; };
-  }, [boostKey, archetype, boostSetName, fetchBoostSetDetail]);
+  }, [boostKey, archetype, boostSetName, boostEffectiveLevel, boostIsAttuned, fetchBoostSetDetail]);
 
   return (
     <div className="p-3 space-y-2">

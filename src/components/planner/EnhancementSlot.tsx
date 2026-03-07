@@ -5,12 +5,12 @@ import { imageUrl } from '@/lib/images';
 import { Minus } from 'lucide-react';
 import { EnhancementPicker } from './EnhancementPicker';
 import { EnhancementHoverCard } from './EnhancementHoverCard';
-import type { SlottedBoost } from '@/types/models';
+import type { BoostView } from '@/types/models';
 
 interface EnhancementSlotProps {
   powerFullName: string;
   slotIndex: number;
-  boost: SlottedBoost | null;
+  boost: BoostView | null;
   isEmpty: boolean;
   onAllocate?: () => void;
   canAllocate?: boolean;
@@ -22,6 +22,8 @@ interface EnhancementSlotProps {
 export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAllocate, canAllocate, onRemove, canRemove, isInherent }: EnhancementSlotProps) {
   const [open, setOpen] = useState(false);
   const setDetailPaneTarget = useHeroStore((s) => s.setDetailPaneTarget);
+  const removeBoostFromSlot = useHeroStore((s) => s.removeBoostFromSlot);
+  const removeInherentBoost = useHeroStore((s) => s.removeInherentBoost);
 
   // Unallocated socket — clickable to allocate a slot
   if (isEmpty) {
@@ -86,9 +88,17 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
       </Popover>
       {canRemove && onRemove && (
         <button
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (boost) {
+              const clearBoost = isInherent ? removeInherentBoost : removeBoostFromSlot;
+              clearBoost(powerFullName, slotIndex);
+            } else {
+              onRemove();
+            }
+          }}
           className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive border border-destructive flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity z-10 hover:brightness-125"
-          title="Remove slot"
+          title={boost ? "Remove enhancement" : "Remove slot"}
         >
           <Minus className="h-2.5 w-2.5 text-white" />
         </button>

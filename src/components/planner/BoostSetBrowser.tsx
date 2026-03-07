@@ -66,16 +66,14 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
     }
   };
 
-  const handleBoostClick = (boostKey: string, icon: string | null, computedName: string | null, attuned: boolean) => {
+  const handleBoostClick = (boostKey: string, attuned: boolean) => {
     const groupName = selectedSet?.group_name ?? null;
-    const isArchetype = groupName === 'Archetype';
-    // Archetype and Very Rare (purple) sets are always attuned
-    const forceAttuned = isArchetype || groupName === 'Very_Rare' || attuned;
+    const isArchetype = groupName?.includes('Archetype') ?? false;
+    // Archetype sets are always attuned; individual boosts may also be inherently attuned
+    const forceAttuned = isArchetype || attuned;
     const level = forceAttuned ? null : (selectedSet?.max_level ?? 50);
     const boost = {
       boostKey,
-      icon,
-      computedName,
       setName: selectedSet?.name ?? null,
       setGroupName: groupName,
       level,
@@ -167,7 +165,7 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
             return (
               <button
                 key={b.boost_key}
-                onClick={() => handleBoostClick(b.boost_key, b.icon, b.computed_name, b.attuned)}
+                onClick={() => handleBoostClick(b.boost_key, b.attuned)}
                 className="px-3 py-2 text-xs text-left hover:bg-coh-secondary/30 transition-colors flex items-center gap-2"
               >
                 {b.icon && <img src={imageUrl(b.icon)} alt="" className="w-4 h-4" />}
