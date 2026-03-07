@@ -6,8 +6,6 @@ the dropdown arrow on the far right of powersets selection is covered by the mid
 
 
 
-audit the simulation engine for backend vs frontend
-
 i cant see damage
 not all enhancements dont seem to affect powers
 

@@ -16,7 +16,7 @@ See `notes/game_mechanics.md` for detailed CoH game mechanics reference (power h
 heroplanner-v2/
   src/                          # React frontend (thin display layer)
     components/
-      ui/                       # shadcn/ui primitives (Button, Card, Select, Tabs, HoverCard, etc.)
+      ui/                       # shadcn/ui primitives (Button, Card, Select, Tabs, HoverCard, Tooltip, etc.)
       ErrorBoundary.tsx         # React Error Boundary — catches render crashes, reports to stderr
       planner/                  # App components (Header, LeftPanel, RightPanel, HeroInfo, PowerSetSelector, PowerSlotCard, EnhancementSlot, EnhancementPicker, BoostSetBrowser, PowerHoverCard, EnhancementHoverCard, Settings, TotalStatsTab, SetBonusesTab, DetailPane, InherentsTab, IncarnatesTab, AccoladesTab, ConfirmDialog)
     lib/

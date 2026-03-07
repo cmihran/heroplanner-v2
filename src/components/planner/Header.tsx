@@ -1,6 +1,7 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { Minus, Square, X, Save, FilePlus2, FolderOpen, Trash2, Heart } from 'lucide-react';
+import { Tip } from '@/components/ui/tooltip';
 import { Settings } from './Settings';
 import { confirm } from './ConfirmDialog';
 import { useHeroStore } from '@/stores/heroStore';
@@ -54,76 +55,84 @@ export function Header() {
       {/* App controls (left) */}
       <div className="relative z-10 flex items-center py-1 pl-2">
         <Settings />
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          onClick={() => saveBuild()}
-          disabled={!archetype || !isDirty}
-          title="Save Build"
-        >
-          <Save className="h-4 w-4" />
-        </button>
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          onClick={() => saveAsNewBuild()}
-          disabled={!archetype}
-          title="Save As..."
-        >
-          <FilePlus2 className="h-4 w-4" />
-        </button>
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          onClick={handleLoad}
-          title="Load Build"
-        >
-          <FolderOpen className="h-4 w-4" />
-        </button>
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-red-400 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          onClick={handleClear}
-          disabled={!archetype}
-          title="Clear Build"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-pink-400 hover:bg-white/10 transition-colors"
-          onClick={openDonate}
-          title="Support Development"
-        >
-          <Heart className="h-4 w-4" />
-        </button>
+        <Tip content="Save Build">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            onClick={() => saveBuild()}
+            disabled={!archetype || !isDirty}
+          >
+            <Save className="h-4 w-4" />
+          </button>
+        </Tip>
+        <Tip content="Save As...">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            onClick={() => saveAsNewBuild()}
+            disabled={!archetype}
+          >
+            <FilePlus2 className="h-4 w-4" />
+          </button>
+        </Tip>
+        <Tip content="Load Build">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            onClick={handleLoad}
+          >
+            <FolderOpen className="h-4 w-4" />
+          </button>
+        </Tip>
+        <Tip content="Clear Build">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-red-400 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            onClick={handleClear}
+            disabled={!archetype}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </Tip>
+        <Tip content="Support Development">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-pink-400 hover:bg-white/10 transition-colors"
+            onClick={openDonate}
+          >
+            <Heart className="h-4 w-4" />
+          </button>
+        </Tip>
       </div>
 
       {/* Window controls (right) */}
       <div className="relative z-10 flex items-center py-1 ml-auto pr-2">
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          onClick={() => appWindow.minimize()}
-          title="Minimize"
-        >
-          <Minus className="h-4 w-4" />
-        </button>
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          onClick={() => appWindow.toggleMaximize()}
-          title="Maximize"
-        >
-          <Square className="h-3 w-3" />
-        </button>
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-red-600 transition-colors"
-          onClick={async () => {
-            const dirty = useHeroStore.getState().buildView?.isDirty ?? false;
-            if (dirty) {
-              const ok = await confirm('Unsaved Changes', 'You have unsaved changes. Close without saving?', 'Close');
-              if (!ok) return;
-            }
-            await appWindow.destroy();
-          }}
-          title="Close"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <Tip content="Minimize">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            onClick={() => appWindow.minimize()}
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+        </Tip>
+        <Tip content="Maximize">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            onClick={() => appWindow.toggleMaximize()}
+          >
+            <Square className="h-3 w-3" />
+          </button>
+        </Tip>
+        <Tip content="Close">
+          <button
+            className="h-8 w-8 flex items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-red-600 transition-colors"
+            onClick={async () => {
+              const dirty = useHeroStore.getState().buildView?.isDirty ?? false;
+              if (dirty) {
+                const ok = await confirm('Unsaved Changes', 'You have unsaved changes. Close without saving?', 'Close');
+                if (!ok) return;
+              }
+              await appWindow.destroy();
+            }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </Tip>
       </div>
     </header>
   );

@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
 import { condenseAttribs } from '@/lib/utils';
 import { Lock, Unlock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Tip } from '@/components/ui/tooltip';
 import type { PowerDetail, CalculatedEffect, BoostSetDetail, EnhancementStrength } from '@/types/models';
 
 function PowerDetailContent({ powerFullName }: { powerFullName: string }) {
@@ -227,20 +228,22 @@ export function DetailPane() {
           {target ? (target.type === 'power' ? 'Power Details' : 'Enhancement Details') : 'Details'}
         </span>
         <div className="flex items-center gap-1">
-          <button
-            onClick={toggleLock}
-            className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${locked ? 'text-coh-gradient4' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
-            title={locked ? 'Locked — click to unlock' : 'Unlocked — click to lock'}
-          >
-            {locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-          </button>
-          <button
-            onClick={toggleMinimized}
-            className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-            title={minimized ? 'Expand' : 'Minimize'}
-          >
-            {minimized ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </button>
+          <Tip content={locked ? 'Locked — click to unlock' : 'Unlocked — click to lock'}>
+            <button
+              onClick={toggleLock}
+              className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${locked ? 'text-coh-gradient4' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+            >
+              {locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+            </button>
+          </Tip>
+          <Tip content={minimized ? 'Expand' : 'Minimize'}>
+            <button
+              onClick={toggleMinimized}
+              className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              {minimized ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+          </Tip>
         </div>
       </div>
 

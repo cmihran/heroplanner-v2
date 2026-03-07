@@ -143,3 +143,24 @@ input[type="radio"] {
 [data-theme="villain"] .header-divider {
   background: linear-gradient(90deg, transparent 0%, #c43030 20%, #c8a84e 50%, #c43030 80%, transparent 100%);
 }
+
+/* Tooltip — portal rendered at document.body */
+.tip-portal {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: 0.375rem;
+  background: #1a1a2e;
+  color: #e2e8f0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: tip-in 100ms ease-out;
+}
+
+@keyframes tip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

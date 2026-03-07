@@ -4,6 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { api } from '@/lib/api';
 import { imageUrl } from '@/lib/images';
 import { Plus, Check } from 'lucide-react';
+import { Tip } from '@/components/ui/tooltip';
 import { EnhancementSlot } from './EnhancementSlot';
 import type { InherentPowerInfo, InherentPowersResult, InherentSlotView } from '@/types/models';
 
@@ -92,17 +93,18 @@ function SlottableInherentCard({ power }: { power: InherentPowerInfo }) {
           )}
         </div>
         {showToggle && (
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleInherentActive(power.fullName); }}
-            className={`w-5 h-5 rounded-full shrink-0 border flex items-center justify-center transition-all duration-200 ${
-              slot.isActive
-                ? 'bg-green-600 border-green-400 shadow-[0_0_0.375rem_rgba(34,197,94,0.4)]'
-                : 'bg-coh-dark/60 border-coh-secondary/40'
-            }`}
-            title={slot.isActive ? 'Active' : 'Inactive'}
-          >
-            {slot.isActive && <Check className="h-3 w-3 text-white" />}
-          </button>
+          <Tip content={slot.isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'}>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleInherentActive(power.fullName); }}
+              className={`w-5 h-5 rounded-full shrink-0 border flex items-center justify-center transition-all duration-200 ${
+                slot.isActive
+                  ? 'bg-green-600 border-green-400 shadow-[0_0_0.375rem_rgba(34,197,94,0.4)]'
+                  : 'bg-coh-dark/60 border-coh-secondary/40'
+              }`}
+            >
+              {slot.isActive && <Check className="h-3 w-3 text-white" />}
+            </button>
+          </Tip>
         )}
       </div>
 
@@ -122,13 +124,14 @@ function SlottableInherentCard({ power }: { power: InherentPowerInfo }) {
             />
           ))}
           {slot.numSlots < power.maxBoosts && canAddMore() && (
-            <button
-              onClick={() => addInherentSlot(power.fullName)}
-              className="w-[2.5rem] h-[2.5rem] rounded-full border-2 border-dashed border-coh-info/30 flex items-center justify-center hover:border-coh-info/60 hover:bg-coh-secondary/20 transition-colors"
-              title="Add enhancement slot"
-            >
-              <Plus className="h-3.5 w-3.5 text-coh-info/50" />
-            </button>
+            <Tip content="Add enhancement slot">
+              <button
+                onClick={() => addInherentSlot(power.fullName)}
+                className="w-[2.5rem] h-[2.5rem] rounded-full border-2 border-dashed border-coh-info/30 flex items-center justify-center hover:border-coh-info/60 hover:bg-coh-secondary/20 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5 text-coh-info/50" />
+              </button>
+            </Tip>
           )}
         </div>
       )}

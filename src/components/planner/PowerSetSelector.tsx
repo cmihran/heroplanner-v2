@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { imageUrl } from '@/lib/images';
 import { X } from 'lucide-react';
+import { Tip } from '@/components/ui/tooltip';
 import type { PowersetCategory, PowerSummary } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { PowerHoverCard } from './PowerHoverCard';
@@ -51,13 +52,14 @@ export function PowerSetSelector({ label, choices, powers, slot, selectedValue }
           </SelectContent>
         </Select>
         {selectedValue && (
-          <button
-            onClick={() => clearPowerset(slot)}
-            className="mb-1 h-6 w-6 flex items-center justify-center rounded-full text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors shrink-0"
-            title="Clear power set"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <Tip content="Clear power set">
+            <button
+              onClick={() => clearPowerset(slot)}
+              className="mb-1 h-6 w-6 flex items-center justify-center rounded-full text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors shrink-0"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </Tip>
         )}
       </div>
 

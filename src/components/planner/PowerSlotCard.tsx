@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, type DragEvent, type MouseEvent } from '
 import { useHeroStore } from '@/stores/heroStore';
 import { imageUrl } from '@/lib/images';
 import { Check, Plus } from 'lucide-react';
+import { Tip } from '@/components/ui/tooltip';
 import { EnhancementSlot } from './EnhancementSlot';
 import { PowerHoverCard } from './PowerHoverCard';
 import type { PowerView } from '@/types/models';
@@ -171,17 +172,18 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
               </div>
             </PowerHoverCard>
             {showToggle && (
-              <button
-                onClick={(e) => { e.stopPropagation(); togglePowerActive(powerFullName); }}
-                className={`ml-auto w-5 h-5 rounded-full shrink-0 border flex items-center justify-center transition-all duration-200 ${
-                  isActive
-                    ? 'bg-green-600 border-green-400 shadow-[0_0_0.375rem_rgba(34,197,94,0.4),inset_0_0.0625rem_0_rgba(255,255,255,0.2)]'
-                    : 'bg-coh-dark/60 border-coh-secondary/40 shadow-[inset_0_0.0625rem_0.125rem_rgba(0,0,0,0.3)]'
-                }`}
-                title={isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'}
-              >
-                {isActive && <Check className="h-3 w-3 text-white" />}
-              </button>
+              <Tip content={isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); togglePowerActive(powerFullName); }}
+                  className={`ml-auto w-5 h-5 rounded-full shrink-0 border flex items-center justify-center transition-all duration-200 ${
+                    isActive
+                      ? 'bg-green-600 border-green-400 shadow-[0_0_0.375rem_rgba(34,197,94,0.4),inset_0_0.0625rem_0_rgba(255,255,255,0.2)]'
+                      : 'bg-coh-dark/60 border-coh-secondary/40 shadow-[inset_0_0.0625rem_0.125rem_rgba(0,0,0,0.3)]'
+                  }`}
+                >
+                  {isActive && <Check className="h-3 w-3 text-white" />}
+                </button>
+              </Tip>
             )}
           </div>
         </div>
@@ -215,17 +217,18 @@ export function PowerSlotCard({ level, selectedPower }: PowerSlotCardProps) {
           ))}
           {/* Ghost add button — visible on hover or during slot drag */}
           {numSlots < maxBoosts && canAddMore() && (
-            <button
-              onClick={() => addSlot(powerFullName)}
-              className={`w-[2.5rem] h-[2.5rem] rounded-full border-2 border-dashed flex items-center justify-center transition-opacity hover:border-coh-info/60 hover:bg-coh-secondary/20 ${
-                slotDragging
-                  ? 'opacity-100 border-coh-info/50 bg-coh-info/10 animate-pulse'
-                  : 'border-coh-info/30 opacity-0 group-hover:opacity-100'
-              }`}
-              title="Add enhancement slot"
-            >
-              <Plus className="h-3.5 w-3.5 text-coh-info/50" />
-            </button>
+            <Tip content="Add enhancement slot">
+              <button
+                onClick={() => addSlot(powerFullName)}
+                className={`w-[2.5rem] h-[2.5rem] rounded-full border-2 border-dashed flex items-center justify-center transition-opacity hover:border-coh-info/60 hover:bg-coh-secondary/20 ${
+                  slotDragging
+                    ? 'opacity-100 border-coh-info/50 bg-coh-info/10 animate-pulse'
+                    : 'border-coh-info/30 opacity-0 group-hover:opacity-100'
+                }`}
+              >
+                <Plus className="h-3.5 w-3.5 text-coh-info/50" />
+              </button>
+            </Tip>
           )}
         </div>
       )}

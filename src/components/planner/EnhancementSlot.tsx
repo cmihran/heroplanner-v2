@@ -3,6 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useHeroStore } from '@/stores/heroStore';
 import { imageUrl } from '@/lib/images';
 import { Minus } from 'lucide-react';
+import { Tip } from '@/components/ui/tooltip';
 import { EnhancementPicker } from './EnhancementPicker';
 import { EnhancementHoverCard } from './EnhancementHoverCard';
 import type { BoostView } from '@/types/models';
@@ -28,12 +29,13 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
   // Unallocated socket — clickable to allocate a slot
   if (isEmpty) {
     return (
-      <button
-        className="w-[2.5rem] h-[2.5rem] rounded-full bg-coh-dark/80 border border-border/20 shadow-[inset_0_0.125rem_0.25rem_rgba(0,0,0,0.5)] hover:border-coh-info/40 hover:bg-coh-dark/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        onClick={onAllocate}
-        disabled={!canAllocate}
-        title="Click to allocate slot"
-      />
+      <Tip content="Click to allocate slot">
+        <button
+          className="w-[2.5rem] h-[2.5rem] rounded-full bg-coh-dark/80 border border-border/20 shadow-[inset_0_0.125rem_0.25rem_rgba(0,0,0,0.5)] hover:border-coh-info/40 hover:bg-coh-dark/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          onClick={onAllocate}
+          disabled={!canAllocate}
+        />
+      </Tip>
     );
   }
 
@@ -87,21 +89,22 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
         </PopoverContent>
       </Popover>
       {canRemove && onRemove && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (boost) {
-              const clearBoost = isInherent ? removeInherentBoost : removeBoostFromSlot;
-              clearBoost(powerFullName, slotIndex);
-            } else {
-              onRemove();
-            }
-          }}
-          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive border border-destructive flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity z-10 hover:brightness-125"
-          title={boost ? "Remove enhancement" : "Remove slot"}
-        >
-          <Minus className="h-2.5 w-2.5 text-white" />
-        </button>
+        <Tip content={boost ? "Remove enhancement" : "Remove slot"}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (boost) {
+                const clearBoost = isInherent ? removeInherentBoost : removeBoostFromSlot;
+                clearBoost(powerFullName, slotIndex);
+              } else {
+                onRemove();
+              }
+            }}
+            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive border border-destructive flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity z-10 hover:brightness-125"
+          >
+            <Minus className="h-2.5 w-2.5 text-white" />
+          </button>
+        </Tip>
       )}
     </div>
   );

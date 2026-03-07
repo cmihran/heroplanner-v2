@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Tip } from '@/components/ui/tooltip';
 import { useHeroStore, toSetBoostInput } from '@/stores/heroStore';
 import { api } from '@/lib/api';
 import { BoostSetBrowser } from './BoostSetBrowser';
@@ -152,16 +153,18 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
             />
           </div>
           {!isArchetypeSet && (
-            <button
-              onClick={handleAttunedToggle}
-              className={`h-6 px-2 text-[0.625rem] rounded border transition-colors ${
-                currentBoost.isAttuned
-                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                  : 'bg-coh-dark border-border/40 text-muted-foreground hover:border-amber-500/40'
-              }`}
-            >
-              Attuned
-            </button>
+            <Tip content={currentBoost.isAttuned ? 'Attuned — scales to your level' : 'Click to attune'}>
+              <button
+                onClick={handleAttunedToggle}
+                className={`h-6 px-2 text-[0.625rem] rounded border transition-colors ${
+                  currentBoost.isAttuned
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                    : 'bg-coh-dark border-border/40 text-muted-foreground hover:border-amber-500/40'
+                }`}
+              >
+                Attuned
+              </button>
+            </Tip>
           )}
           {isArchetypeSet && (
             <span className="h-6 px-2 text-[0.625rem] rounded border bg-amber-500/20 border-amber-500/50 text-amber-400 flex items-center">
@@ -171,29 +174,33 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
           {/* IO Boosters: any non-attuned IO enhancement */}
           {!currentBoost.isAttuned && (
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  const newLevel = Math.max(0, currentBoost.boostLevel - 1);
-                  slotBoost(powerFullName, slotIndex, { ...toSetBoostInput(currentBoost), boostLevel: newLevel });
-                }}
-                disabled={currentBoost.boostLevel <= 0}
-                className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
-              >
-                −
-              </button>
+              <Tip content="Remove IO booster">
+                <button
+                  onClick={() => {
+                    const newLevel = Math.max(0, currentBoost.boostLevel - 1);
+                    slotBoost(powerFullName, slotIndex, { ...toSetBoostInput(currentBoost), boostLevel: newLevel });
+                  }}
+                  disabled={currentBoost.boostLevel <= 0}
+                  className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
+                >
+                  −
+                </button>
+              </Tip>
               <span className={`text-[0.625rem] min-w-[1.5rem] text-center ${currentBoost.boostLevel > 0 ? 'text-cyan-400 font-bold' : 'text-muted-foreground'}`}>
                 +{currentBoost.boostLevel}
               </span>
-              <button
-                onClick={() => {
-                  const newLevel = Math.min(5, currentBoost.boostLevel + 1);
-                  slotBoost(powerFullName, slotIndex, { ...toSetBoostInput(currentBoost), boostLevel: newLevel });
-                }}
-                disabled={currentBoost.boostLevel >= 5}
-                className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
-              >
-                +
-              </button>
+              <Tip content="Add IO booster">
+                <button
+                  onClick={() => {
+                    const newLevel = Math.min(5, currentBoost.boostLevel + 1);
+                    slotBoost(powerFullName, slotIndex, { ...toSetBoostInput(currentBoost), boostLevel: newLevel });
+                  }}
+                  disabled={currentBoost.boostLevel >= 5}
+                  className="w-5 h-5 flex items-center justify-center rounded text-xs bg-coh-dark border border-border/40 text-muted-foreground hover:text-white disabled:opacity-30 transition-colors"
+                >
+                  +
+                </button>
+              </Tip>
             </div>
           )}
         </div>
