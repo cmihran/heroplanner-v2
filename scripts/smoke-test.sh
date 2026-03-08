@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 # Smoke test: starts the app, waits for [READY] or [FRONTEND ERROR], then exits.
 # Exit code 0 = app started successfully, 1 = error.
+# Uses port 5174 by default (configurable via SMOKE_PORT) to avoid killing a running make dev.
 
 set -euo pipefail
 
+SMOKE_PORT=${SMOKE_PORT:-5174}
 TIMEOUT=${1:-60}
 PIPE=$(mktemp -u)
 mkfifo "$PIPE"
 
-# Kill any existing Vite dev server on port 5173 so we don't conflict
-if fuser 5173/tcp >/dev/null 2>&1; then
-  echo "Warning: port 5173 in use, killing existing process..."
-  fuser -k 5173/tcp >/dev/null 2>&1 || true
+# Kill anything already on our smoke port (but never touch 5173/dev)
+if fuser "$SMOKE_PORT"/tcp >/dev/null 2>&1; then
+  echo "Warning: port $SMOKE_PORT in use, killing existing process..."
+  fuser -k "$SMOKE_PORT"/tcp >/dev/null 2>&1 || true
   sleep 1
 fi
 
@@ -21,8 +23,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Start make dev in its own process group so we can kill the whole tree
-setsid make dev >"$PIPE" 2>&1 &
+# Start make dev on the smoke port in its own process group
+# VITE_PORT tells Vite to listen on the smoke port
+# TAURI_CONFIG overrides devUrl so Tauri connects to the right port
+setsid env VITE_PORT="$SMOKE_PORT" \
+  TAURI_CONFIG="{\"build\":{\"devUrl\":\"http://localhost:$SMOKE_PORT\"}}" \
+  make dev >"$PIPE" 2>&1 &
 DEV_PID=$!
 
 RESULT=1

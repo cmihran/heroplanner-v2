@@ -19,9 +19,6 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
   const fetchBoostSetDetail = useHeroStore((s) => s.fetchBoostSetDetail);
   const archetype = useHeroStore((s) => s.archetype);
 
-  const disabled = localStorage.getItem('heroplanner-hover') === 'false';
-  if (disabled) return <>{children}</>;
-
   const hasSet = !!boost.setName;
 
   const handleOpenChange = useCallback(
@@ -58,6 +55,9 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
           .join(', ');
       })()
     : null;
+
+  const disabled = localStorage.getItem('heroplanner-hover') === 'false';
+  if (disabled) return <>{children}</>;
 
   // For plain IOs (no set), just show a simple tooltip-like card
   if (!hasSet) {

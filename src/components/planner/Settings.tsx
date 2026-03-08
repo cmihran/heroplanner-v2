@@ -95,6 +95,7 @@ export function Settings() {
     api.setZoom(1.0);
     applyRootFontSize(zoom);
     applyTheme(theme);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: apply initial zoom/theme from localStorage
   }, []);
 
   const applyZoom = (newZoom: number) => {

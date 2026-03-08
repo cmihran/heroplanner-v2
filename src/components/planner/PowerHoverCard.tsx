@@ -21,9 +21,6 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
   const [loading, setLoading] = useState(false);
   const fetchPowerDetail = useHeroStore((s) => s.fetchPowerDetail);
 
-  const disabled = localStorage.getItem('heroplanner-hover') === 'false';
-  if (disabled) return <>{children}</>;
-
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (open && !detail) {
@@ -59,6 +56,9 @@ export function PowerHoverCard({ powerFullName, children, side }: PowerHoverCard
     },
     [detail, fetchPowerDetail, powerFullName]
   );
+
+  const disabled = localStorage.getItem('heroplanner-hover') === 'false';
+  if (disabled) return <>{children}</>;
 
   return (
     <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleOpenChange}>

@@ -67,6 +67,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
       .then((s) => { if (!cancelled) setCurrentStrengths(s); })
       .catch(() => { if (!cancelled) setCurrentStrengths(null); });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally deps on individual fields, not whole object
   }, [currentBoost?.boostKey, currentBoost?.level, currentBoost?.boostLevel, currentBoost?.isAttuned, archetype]);
 
   const slotBoost = isInherent ? setInherentBoost : setBoostInSlot;

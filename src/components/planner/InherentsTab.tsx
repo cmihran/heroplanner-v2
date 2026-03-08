@@ -174,6 +174,7 @@ export function InherentsTab() {
     });
 
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally deps on name, not whole object
   }, [archetype?.name]);
 
   if (!archetype) {

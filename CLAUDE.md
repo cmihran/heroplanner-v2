@@ -93,7 +93,8 @@ All commands are available as `make` targets. Run `make help` to list them.
 | `make test` | Run Rust unit tests (no DB required) |
 | `make test-all` | Run all Rust tests including DB integration tests |
 | `make check` | Run all checks (lint + typecheck + rustcheck) |
-| `make smoke` | Run all tests + smoke test the app |
+| `make verify` | Run all tests and checks (no app launch, safe alongside `make dev`) |
+| `make smoke` | Run all tests + smoke test the app (port 5174, safe alongside `make dev`) |
 | `make migrate` | Run zip-to-SQLite migration (auto-detects latest zip) |
 | `make upscale-list` | Show upscale models and progress |
 | `make upscale MODEL=<name>` | Upscale icons with a specific model |
@@ -168,12 +169,15 @@ Core flow: Archetype → Powerset Category → Powerset → Powers → Enhanceme
 
 ## Agent Validation Protocol
 
-After making ANY frontend or backend change, run `make smoke` to validate. It first runs all Rust tests (including DB integration tests), then launches the full app, waits for `[READY]` or a fatal error, then kills everything and exits:
+After making changes, validate using these targets (all safe to run alongside a running `make dev`):
 
-- Exit code 0 + `SMOKE TEST PASSED` — app compiled and rendered successfully
-- Exit code 1 + `SMOKE TEST FAILED` — build or runtime error occurred
+- **`make verify`** — default validation. Runs all Rust tests (including DB integration tests) + ESLint + TypeScript check + Cargo check. Fast, no app launch, no ports touched. Always safe.
+- **`make smoke`** — full smoke test. Runs `make verify` dependencies then launches the app on port 5174 (configurable via `SMOKE_PORT` env var), waits for `[READY]` or a fatal error, then kills everything and exits. Safe alongside `make dev` (which uses port 5173).
+- **`make test`** — fast path for Rust-only changes (engine, calc, models).
 
-Signals in the output:
+Use `make verify` for most changes. Use `make smoke` only when you need to confirm the app actually renders (e.g. major frontend changes). Never use `make dev` (interactive, requires manual exit).
+
+Smoke test signals:
 - `[READY]` — app rendered successfully (appears after React mounts)
 - `[FRONTEND ERROR]` — fatal JS error (process exits with code 1)
 - `[FRONTEND WARNING]` — non-fatal diagnostic (app stays alive)
@@ -181,7 +185,7 @@ Signals in the output:
 - `[CONSOLE.ERROR]` / `[CONSOLE.WARN]` — intercepted console output
 - `[REACT ERROR]` — ErrorBoundary caught a render crash (fatal)
 
-For Rust-only changes (engine, calc, models), `make test` is a fast validation path. Use `make smoke` for frontend or full-stack changes. Never use `make dev` (interactive, requires manual exit).
+Exit codes: 0 + `SMOKE TEST PASSED` = success, 1 + `SMOKE TEST FAILED` = error.
 
 ## Known Quirks
 
@@ -218,4 +222,4 @@ Prefer LSP over Grep/Read for code navigation — it's faster, precise, and avoi
 
 Use Grep only when LSP isn't available or for text/pattern searches (comments, strings, config).
 
-After writing or editing code, check LSP diagnostics and fix errors before proceeding.
+LSP diagnostics after Edit tool calls are asynchronous and often stale (reflecting pre-edit state). After multiple sequential edits to the same file, **run `npm run lint` or `npx tsc -b --noEmit`** for ground truth instead of trusting inline diagnostics.

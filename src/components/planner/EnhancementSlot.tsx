@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useHeroStore } from '@/stores/heroStore';
 import { imageUrl } from '@/lib/images';
@@ -25,6 +25,7 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
   const setDetailPaneTarget = useHeroStore((s) => s.setDetailPaneTarget);
   const removeBoostFromSlot = useHeroStore((s) => s.removeBoostFromSlot);
   const removeInherentBoost = useHeroStore((s) => s.removeInherentBoost);
+  const shiftBlockRef = React.useRef(false);
 
   // Unallocated socket — clickable to allocate a slot
   if (isEmpty) {
@@ -79,9 +80,30 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
     }
   };
 
+  const handleShiftClick = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.shiftKey) return;
+    shiftBlockRef.current = true;
+    e.stopPropagation();
+    e.preventDefault();
+    if (boost) {
+      const clearBoost = isInherent ? removeInherentBoost : removeBoostFromSlot;
+      clearBoost(powerFullName, slotIndex);
+    } else if (canRemove && onRemove) {
+      onRemove();
+    }
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (shiftBlockRef.current) {
+      shiftBlockRef.current = false;
+      return;
+    }
+    setOpen(newOpen);
+  };
+
   const content = (
-    <div className="relative group/slot" onMouseEnter={handleEnhancementHover}>
-      <Popover open={open} onOpenChange={setOpen}>
+    <div className="relative group/slot" onMouseEnter={handleEnhancementHover} onPointerDownCapture={handleShiftClick}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           {slotButton}
         </PopoverTrigger>
@@ -94,7 +116,7 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
           />
         </PopoverContent>
       </Popover>
-      {canRemove && onRemove && (
+      {(boost || (canRemove && onRemove)) && (
         <Tip content={boost ? "Remove enhancement" : "Remove slot"}>
           <button
             onClick={(e) => {
@@ -102,7 +124,7 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
               if (boost) {
                 const clearBoost = isInherent ? removeInherentBoost : removeBoostFromSlot;
                 clearBoost(powerFullName, slotIndex);
-              } else {
+              } else if (onRemove) {
                 onRemove();
               }
             }}

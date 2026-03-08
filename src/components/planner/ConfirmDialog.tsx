@@ -19,6 +19,7 @@ interface ConfirmRequest {
 
 let pendingRequest: ((req: ConfirmRequest) => void) | null = null;
 
+// eslint-disable-next-line react-refresh/only-export-components -- co-located imperative API for ConfirmDialog
 export function confirm(title: string, description: string, confirmLabel?: string): Promise<boolean> {
   return new Promise((resolve) => {
     if (pendingRequest) {

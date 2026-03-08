@@ -1,4 +1,4 @@
-.PHONY: dev frontend build lint typecheck rustcheck test test-all smoke migrate clean install \
+.PHONY: dev frontend build lint typecheck rustcheck test test-all verify smoke migrate clean install \
        upscale upscale-dat upscale-tta upscale-list upscale-activate upscale-restore
 
 # Development
@@ -30,7 +30,9 @@ test-all:             ## Run all Rust tests including DB integration tests
 
 check: lint typecheck rustcheck  ## Run all checks
 
-smoke: test-all       ## Run all tests then smoke test the app
+verify: test-all lint typecheck rustcheck  ## Run all tests and checks (no app launch)
+
+smoke: test-all       ## Run all tests then smoke test the app (port 5174)
 	./scripts/smoke-test.sh
 
 sync:                 ## Sync project to Windows (C:\dev\heroplanner-v2)

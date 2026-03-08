@@ -71,6 +71,7 @@ export function Tip({ children, content, side = 'bottom' }: TipProps) {
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   const childProps = children.props as Record<string, unknown>
+  // eslint-disable-next-line react-hooks/refs -- forwarding ref via cloneElement, not reading during render
   const child = cloneElement(children, {
     ref: triggerRef,
     onMouseEnter: (e: MouseEvent) => {

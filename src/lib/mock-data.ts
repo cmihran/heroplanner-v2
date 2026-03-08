@@ -145,7 +145,7 @@ function getCategory(name: string): PowersetWithPowers[] {
 export const mockApi = {
   listArchetypes: () => archetypes,
   loadPowersetsForCategory: (categoryName: string) => getCategory(categoryName),
-  setZoom: (_factor: number) => {},
+  setZoom: () => {},
   saveBuild: () => null,
   loadBuild: () => null,
   loadBuildFromPath: () => null,
