@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useHeroStore, LEVEL_SLOTS } from '@/stores/heroStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import type { PanelImperativeHandle } from 'react-resizable-panels';
 import { PowerSlotCard } from './PowerSlotCard';
 import { InherentsTab } from './InherentsTab';
 import { IncarnatesTab } from './IncarnatesTab';
@@ -12,8 +13,16 @@ import type { PowerView } from '@/types/models';
 
 export function RightPanel() {
   const buildView = useHeroStore((s) => s.buildView);
-  const detailPaneTarget = useHeroStore((s) => s.detailPaneTarget);
   const detailPaneMinimized = useHeroStore((s) => s.detailPaneMinimized);
+
+  const detailPanelRef = useRef<PanelImperativeHandle>(null);
+  const [detailCollapsed, setDetailCollapsed] = useState(false);
+  const toggleDetailPanel = useCallback(() => {
+    const panel = detailPanelRef.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) panel.expand();
+    else panel.collapse();
+  }, []);
 
   const levelToPower = useMemo(() => {
     const map: Record<number, PowerView | null> = {};
@@ -23,7 +32,7 @@ export function RightPanel() {
   }, [buildView?.powers]);
 
   const slotsRemaining = (buildView?.maxTotalSlots ?? 67) - (buildView?.totalSlotsAdded ?? 0);
-  const showDetailSplit = detailPaneTarget !== null && !detailPaneMinimized;
+  const showDetailSplit = !detailPaneMinimized;
   const showMinimizedBar = detailPaneMinimized;
 
   return (
@@ -86,8 +95,20 @@ export function RightPanel() {
                   </div>
                 </ScrollArea>
               </ResizablePanel>
-              <ResizableHandle />
-              <ResizablePanel defaultSize={30} minSize={15}>
+              <ResizableHandle
+                withHandle
+                orientation="vertical"
+                collapsed={detailCollapsed}
+                onHandleClick={toggleDetailPanel}
+              />
+              <ResizablePanel
+                panelRef={detailPanelRef}
+                collapsible
+                collapsedSize={0}
+                defaultSize={30}
+                minSize={15}
+                onResize={(size) => setDetailCollapsed(size.asPercentage === 0)}
+              >
                 <DetailPane />
               </ResizablePanel>
             </ResizablePanelGroup>

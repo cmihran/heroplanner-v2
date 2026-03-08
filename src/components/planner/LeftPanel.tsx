@@ -10,6 +10,7 @@ export function LeftPanel() {
   const primarySetChoices = useHeroStore((s) => s.primarySetChoices);
   const secondarySetChoices = useHeroStore((s) => s.secondarySetChoices);
   const powerPoolChoices = useHeroStore((s) => s.powerPoolChoices);
+  const hasArchetype = useHeroStore((s) => s.buildView?.archetypeId != null);
   const selectedPrimary = useHeroStore((s) => s.buildView?.selectedPrimary ?? null);
   const selectedSecondary = useHeroStore((s) => s.buildView?.selectedSecondary ?? null);
   const selectedPool1 = useHeroStore((s) => s.buildView?.selectedPool1 ?? null);
@@ -62,6 +63,7 @@ export function LeftPanel() {
                 powers={primaryPowers}
                 slot="primary"
                 selectedValue={selectedPrimary}
+                disabled={!hasArchetype}
               />
               <PowerSetSelector
                 label="Secondary Power Set"
@@ -69,6 +71,7 @@ export function LeftPanel() {
                 powers={secondaryPowers}
                 slot="secondary"
                 selectedValue={selectedSecondary}
+                disabled={!hasArchetype}
               />
               {/* Divider between main sets and pools */}
               <div className="py-1">
@@ -80,6 +83,7 @@ export function LeftPanel() {
                 powers={pool1Powers}
                 slot="pool1"
                 selectedValue={selectedPool1}
+                disabled={!hasArchetype}
               />
               <PowerSetSelector
                 label="Power Pool 2"
@@ -87,6 +91,7 @@ export function LeftPanel() {
                 powers={pool2Powers}
                 slot="pool2"
                 selectedValue={selectedPool2}
+                disabled={!hasArchetype}
               />
               <PowerSetSelector
                 label="Power Pool 3"
@@ -94,6 +99,7 @@ export function LeftPanel() {
                 powers={pool3Powers}
                 slot="pool3"
                 selectedValue={selectedPool3}
+                disabled={!hasArchetype}
               />
               <PowerSetSelector
                 label="Power Pool 4"
@@ -101,6 +107,7 @@ export function LeftPanel() {
                 powers={pool4Powers}
                 slot="pool4"
                 selectedValue={selectedPool4}
+                disabled={!hasArchetype}
               />
             </div>
           </ScrollArea>

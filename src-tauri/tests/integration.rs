@@ -14,6 +14,31 @@ fn test_db_conn() -> Option<rusqlite::Connection> {
         .and_then(|p| rusqlite::Connection::open(p).ok())
 }
 
+/// Find an enhancement key with a Smashing_Dmg effect that actually resolves to a positive
+/// strength for the given archetype. HashMap iteration order is non-deterministic, so
+/// a bare `.find()` can land on procs or enhancements with missing AT tables.
+fn find_smashing_dmg_key(
+    gd: &heroplanner_lib::engine::game_data::GameData,
+    archetype_id: i64,
+) -> String {
+    gd.enhancement_effects
+        .iter()
+        .find(|(_, effs)| {
+            effs.iter().any(|e| {
+                e.attribs.contains(&"Smashing_Dmg".to_string())
+                    && gd
+                        .archetype_tables
+                        .get(&(archetype_id, e.table_name.clone()))
+                        .and_then(|v| v.get(49).copied())
+                        .unwrap_or(0.0)
+                        * e.scale
+                        > 0.0
+            })
+        })
+        .map(|(k, _)| k.clone())
+        .expect("No enhancement with positive Smashing_Dmg for this archetype")
+}
+
 #[test]
 #[ignore]
 fn enhancement_strength_single_set_io() {
@@ -21,12 +46,9 @@ fn enhancement_strength_single_set_io() {
     let gd = load_game_data(&conn);
     let blaster_id = *gd.archetype_ids.get("blaster").expect("blaster not found");
 
-    // Find any set IO with Smashing_Dmg effect
-    let (key, effects) = gd
-        .enhancement_effects
-        .iter()
-        .find(|(_, effs)| effs.iter().any(|e| e.attribs.contains(&"Smashing_Dmg".to_string())))
-        .expect("No enhancement with Smashing_Dmg found");
+    // Find a set IO with Smashing_Dmg that resolves to positive strength for blasters
+    let key = find_smashing_dmg_key(&gd, blaster_id);
+    let effects = gd.enhancement_effects.get(&key).unwrap();
 
     let enh = SlottedEnhancement {
         boost_key: key.clone(),
@@ -68,11 +90,7 @@ fn ed_stacking_two_damage_enhancements() {
     let gd = load_game_data(&conn);
     let blaster_id = *gd.archetype_ids.get("blaster").expect("blaster not found");
 
-    let (key, _) = gd
-        .enhancement_effects
-        .iter()
-        .find(|(_, effs)| effs.iter().any(|e| e.attribs.contains(&"Smashing_Dmg".to_string())))
-        .expect("No enhancement with Smashing_Dmg");
+    let key = find_smashing_dmg_key(&gd, blaster_id);
 
     let single = SlottedEnhancement {
         boost_key: key.clone(),
@@ -102,11 +120,7 @@ fn attuned_vs_fixed_level() {
     let gd = load_game_data(&conn);
     let blaster_id = *gd.archetype_ids.get("blaster").expect("blaster not found");
 
-    let (key, _) = gd
-        .enhancement_effects
-        .iter()
-        .find(|(_, effs)| effs.iter().any(|e| e.attribs.contains(&"Smashing_Dmg".to_string())))
-        .expect("No enhancement with Smashing_Dmg");
+    let key = find_smashing_dmg_key(&gd, blaster_id);
 
     let attuned_50 = SlottedEnhancement {
         boost_key: key.clone(),

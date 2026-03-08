@@ -424,12 +424,28 @@ export const useHeroStore = create<HeroState>((set, get) => ({
 
   clearBuild: async () => {
     localStorage.removeItem(LAST_BUILD_KEY);
+    const cleared = {
+      archetype: null,
+      localHeroName: '',
+      primarySetChoices: [] as PowersetCategory[],
+      secondarySetChoices: [] as PowersetCategory[],
+      powerPoolChoices: [] as PowersetCategory[],
+      preloadedPowers: {} as Record<string, PowerSummary[]>,
+      primaryPowers: [] as PowerSummary[],
+      secondaryPowers: [] as PowerSummary[],
+      pool1Powers: [] as PowerSummary[],
+      pool2Powers: [] as PowerSummary[],
+      pool3Powers: [] as PowerSummary[],
+      pool4Powers: [] as PowerSummary[],
+      powerDetailCache: {} as Record<string, PowerDetail>,
+      boostSetDetailCache: {} as Record<string, BoostSetDetail>,
+      detailPaneTarget: null,
+      detailPaneLocked: false,
+    };
     try {
-      const buildView = await api.engineClearBuild();
-      set({ buildView, localHeroName: '' });
-    } catch {
-      set({ buildView: null, localHeroName: '' });
-    }
+      await api.engineClearBuild();
+    } catch { /* engine may not have an active build */ }
+    set({ ...cleared, buildView: null });
   },
 
   saveBuild: async () => {

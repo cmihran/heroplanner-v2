@@ -16,22 +16,25 @@ interface PowerSetSelectorProps {
   powers: PowerSummary[];
   slot: 'primary' | 'secondary' | 'pool1' | 'pool2' | 'pool3' | 'pool4';
   selectedValue: string | null;
+  disabled?: boolean;
 }
 
-export function PowerSetSelector({ label, choices, powers, slot, selectedValue }: PowerSetSelectorProps) {
+export function PowerSetSelector({ label, choices, powers, slot, selectedValue, disabled }: PowerSetSelectorProps) {
   const selectPowerset = useHeroStore((s) => s.selectPowerset);
   const clearPowerset = useHeroStore((s) => s.clearPowerset);
   const togglePower = useHeroStore((s) => s.togglePower);
+  const setDetailPaneTarget = useHeroStore((s) => s.setDetailPaneTarget);
   const powerNameToLevel = useHeroStore((s) => s.buildView?.powerNameToLevel) ?? EMPTY_OBJ;
 
   return (
-    <div className="mb-3">
+    <div className={cn('mb-3', disabled && 'opacity-50 pointer-events-none')}>
       <label className="text-[0.6875rem] font-medium text-coh-gradient4/70 mb-1 block uppercase tracking-wider">
         {label}
       </label>
       <div className="relative flex items-center gap-1">
         <Select
           value={selectedValue ?? ''}
+          disabled={disabled}
           onValueChange={(name) => {
             const ps = choices.find((c) => c.powerset_name === name);
             if (ps) selectPowerset(slot, ps);
@@ -72,6 +75,7 @@ export function PowerSetSelector({ label, choices, powers, slot, selectedValue }
                 <button
                   key={power.full_name}
                   onClick={() => togglePower(power.full_name)}
+                  onMouseEnter={() => setDetailPaneTarget({ type: 'power', key: power.full_name })}
                   className={cn(
                     'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-all duration-150',
                     isSelected

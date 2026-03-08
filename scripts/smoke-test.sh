@@ -8,6 +8,13 @@ TIMEOUT=${1:-60}
 PIPE=$(mktemp -u)
 mkfifo "$PIPE"
 
+# Kill any existing Vite dev server on port 5173 so we don't conflict
+if fuser 5173/tcp >/dev/null 2>&1; then
+  echo "Warning: port 5173 in use, killing existing process..."
+  fuser -k 5173/tcp >/dev/null 2>&1 || true
+  sleep 1
+fi
+
 cleanup() {
   [ -n "${DEV_PID:-}" ] && kill -- -"$DEV_PID" 2>/dev/null
   rm -f "$PIPE"
