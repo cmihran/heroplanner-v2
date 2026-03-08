@@ -35,8 +35,8 @@ export function EnhancementHoverCard({ boost, children, side }: EnhancementHover
       }
       // Fetch enhancement strengths on open
       if (open && !strengths && archetype) {
-        const effectiveLevel = boost.isAttuned ? 49 : Math.min(53, (boost.level ?? 50) + (boost.boostLevel ?? 0)) - 1;
-        api.getEnhancementValues(archetype.id, boost.boostKey, effectiveLevel, boost.isAttuned)
+        const baseLevel = boost.isAttuned ? 49 : (boost.level ?? 50) - 1;
+        api.getEnhancementValues(archetype.id, boost.boostKey, baseLevel, boost.isAttuned, boost.boostLevel ?? 0)
           .then(setStrengths)
           .catch(() => {});
       }

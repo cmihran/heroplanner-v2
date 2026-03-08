@@ -67,15 +67,15 @@ export function BoostSetBrowser({ allowedCategories, powerFullName, slotIndex, o
   };
 
   const handleBoostClick = (boostKey: string, attuned: boolean) => {
-    const groupName = selectedSet?.group_name ?? null;
-    const isArchetype = groupName?.includes('Archetype') ?? false;
+    const rarity = selectedSet?.rarity ?? null;
+    const isArchetype = rarity === 'Archetype';
     // Archetype sets are always attuned; individual boosts may also be inherently attuned
     const forceAttuned = isArchetype || attuned;
     const level = forceAttuned ? null : (selectedSet?.max_level ?? 50);
     const boost = {
       boostKey,
       setName: selectedSet?.name ?? null,
-      setGroupName: groupName,
+      setGroupName: rarity,
       level,
       isAttuned: forceAttuned,
       boostLevel: 0,

@@ -37,9 +37,10 @@ pub fn compute_enhancement_strengths(
         let enh_level = if enh.is_attuned {
             char_level
         } else {
-            let base = enh.level.unwrap_or(50) + enh.boost_level;
-            base.min(53).saturating_sub(1).max(0) as usize
+            enh.level.unwrap_or(50).saturating_sub(1).max(0) as usize
         };
+        // IO boosters: +5% per boost level (multiplicative on base value)
+        let boost_mult = 1.0 + (enh.boost_level as f64 * 0.05);
 
         let effect_data = match game_data.enhancement_effects.get(&enh.boost_key) {
             Some(effects) => effects,
@@ -53,7 +54,7 @@ pub fn compute_enhancement_strengths(
                 .and_then(|values| values.get(enh_level).copied())
                 .unwrap_or(0.0);
 
-            let strength = table_value * eff.scale;
+            let strength = table_value * eff.scale * boost_mult;
             for attrib in &eff.attribs {
                 *raw_strengths.entry(attrib.clone()).or_default() += strength;
             }

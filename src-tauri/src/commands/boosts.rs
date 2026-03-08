@@ -47,12 +47,12 @@ pub fn get_boost_set_detail(
     // Get the boost set
     let mut stmt = db
         .prepare(
-            "SELECT id, name, display_name, group_name, min_level, max_level
+            "SELECT id, name, display_name, group_name, min_level, max_level, raw_json
              FROM boost_sets WHERE name = ?1",
         )
         .map_err(|e| e.to_string())?;
 
-    let (set_id, name, display_name, group_name, min_level, max_level) = stmt
+    let (set_id, name, display_name, group_name, min_level, max_level, raw_json) = stmt
         .query_row([set_name], |row| {
             Ok((
                 row.get::<_, i64>(0)?,
@@ -61,9 +61,22 @@ pub fn get_boost_set_detail(
                 row.get::<_, String>(3)?,
                 row.get::<_, i32>(4)?,
                 row.get::<_, i32>(5)?,
+                row.get::<_, String>(6)?,
             ))
         })
         .map_err(|e| e.to_string())?;
+
+    // Extract rarity from conversion_groups (e.g. ["Rarity: Very Rare", ...])
+    let rarity: Option<String> = serde_json::from_str::<serde_json::Value>(&raw_json)
+        .ok()
+        .and_then(|v| v.get("conversion_groups")?.as_array().cloned())
+        .and_then(|groups| {
+            groups.iter().find_map(|g| {
+                g.as_str()
+                    .and_then(|s| s.strip_prefix("Rarity: "))
+                    .map(|s| s.to_string())
+            })
+        });
 
     // Get bonuses
     let mut bonus_stmt = db
@@ -165,6 +178,7 @@ pub fn get_boost_set_detail(
         name,
         display_name,
         group_name,
+        rarity,
         min_level,
         max_level,
         bonuses,

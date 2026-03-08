@@ -10,11 +10,6 @@ i cant see damage
 not all enhancements dont seem to affect powers
 
 
-boosting an enhancement should show the strength go from ~42% to ~53%
-
-
-
-
 sync attuned enhancements glow
 
 
@@ -27,3 +22,10 @@ if i mouse over an enhancement in the first slot, i should see the red minus ico
 total stats should show +x% for damage and tohit
 
 
+make purple enhancements glow
+
+
+shift click on an enhancement / slot as a shortcut to 
+
+
+import build from mids

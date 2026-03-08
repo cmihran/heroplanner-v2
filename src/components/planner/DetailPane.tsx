@@ -130,7 +130,8 @@ function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; p
   let boostIcon: string | null = null;
   let boostName: string | null = null;
   let boostIsAttuned = false;
-  let boostEffectiveLevel = 49;
+  let boostBaseLevel = 49;
+  let boostBoostLevel = 0;
   if (powerName && buildView) {
     // Check regular powers first, then inherent slots
     const pv = buildView.powers.find((p) => p.powerFullName === powerName);
@@ -142,8 +143,8 @@ function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; p
         boostIcon = boost.icon;
         boostName = boost.computedName;
         boostIsAttuned = boost.isAttuned;
-        const baseLevel = boost.level ?? 50;
-        boostEffectiveLevel = Math.min(53, baseLevel + (boost.boostLevel ?? 0)) - 1;
+        boostBaseLevel = boost.isAttuned ? 49 : (boost.level ?? 50) - 1;
+        boostBoostLevel = boost.boostLevel ?? 0;
       }
     }
   }
@@ -151,7 +152,7 @@ function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; p
   useEffect(() => {
     if (!archetype) return;
     let cancelled = false;
-    api.getEnhancementValues(archetype.id, boostKey, boostEffectiveLevel, boostIsAttuned).then((s) => {
+    api.getEnhancementValues(archetype.id, boostKey, boostBaseLevel, boostIsAttuned, boostBoostLevel).then((s) => {
       if (!cancelled) setStrengths(s);
     });
     if (boostSetName) {
@@ -160,7 +161,7 @@ function EnhancementDetailContent({ boostKey, powerName }: { boostKey: string; p
       });
     }
     return () => { cancelled = true; };
-  }, [boostKey, archetype, boostSetName, boostEffectiveLevel, boostIsAttuned, fetchBoostSetDetail]);
+  }, [boostKey, archetype, boostSetName, boostBaseLevel, boostBoostLevel, boostIsAttuned, fetchBoostSetDetail]);
 
   return (
     <div className="p-3 space-y-2">

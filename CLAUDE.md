@@ -185,7 +185,9 @@ For Rust-only changes (engine, calc, models), `make test` is a fast validation p
 
 ## Known Quirks
 
-- `react-resizable-panels` v4 renamed exports: `Group` (not PanelGroup), `Panel`, `Separator` (not PanelResizeHandle). No `direction` prop — horizontal by default.
+- `react-resizable-panels` v4 renamed exports: `Group` (not PanelGroup), `Panel`, `Separator` (not PanelResizeHandle). No `direction` prop — horizontal by default. Uses `elementRef` (not `ref`) for DOM refs. `PanelSize` is `{ asPercentage: number; inPixels: number }`, not a plain number. Left panel is collapsible via `panelRef` + `collapse()`/`expand()`/`isCollapsed()` imperative API.
+- `react-resizable-panels` Separator registers `addEventListener("pointerdown", handler, true)` (capture phase) on an ancestor. Any clickable element inside the Separator WILL trigger drag — `stopPropagation()` cannot prevent it. The collapse chevron is rendered as a sibling outside the Separator DOM, position-synced via `requestAnimationFrame`.
+- Radix ScrollArea Viewport injects a child `<div style="min-width: 100%; display: table">`. The `display: table` prevents content from shrinking to fit the viewport width (content renders at intrinsic width and gets clipped). Fix: `[&>div]:!block` on the Viewport overrides this globally in `scroll-area.tsx`.
 - Tauri `generate_context!()` requires icon files to be RGBA PNGs. Placeholder icons are in `src-tauri/icons/`.
 - The `heroplanner.db` bundled as a Tauri resource must exist at build time. Run the migration script first.
 - Rust needs `use tauri::Manager;` import for `app.manage()` to work.
@@ -198,12 +200,13 @@ For Rust-only changes (engine, calc, models), `make test` is a fast validation p
 - Effect template `aspect` field determines how values combine: "Strength"/"Current" = percentage multiplier, "Maximum"/"Absolute" = flat addition. HP bonuses from powers (e.g. True Grit) use "Maximum" aspect — flat HP additions, NOT percentages.
 - Endurance recovery formula (from wiki): `EPS = MaxEnd * totalRecovery / 60`. The bar fills 0→100% in 60 seconds at base recovery. Base `attrib_base.recovery` = 1.0 for most ATs (1.05 for Arachnos).
 - HP regeneration uses same pattern: `HP/s = effectiveHP * totalRegen / 60`. Base `attrib_base.regeneration` = 0.25 for most ATs.
-- Plain IO enhancement values: templates use flat `*_ones` tables with tiny scale (e.g. 0.0833). The game engine applies IO schedule via `CombatModMagnitude` flag. `apply_combat_mod_substitution` in calc.rs detects `CombatModMagnitude` + `Boost (12)` flags and replaces `*_ones` → `*_boosts_33` with scale 1.0. Procs excluded (no `Boost` flag). Set IOs unaffected (already use `*_boosts_33`).
+- Plain IO enhancement values: templates use flat `*_ones` tables with tiny scale. The game engine applies IO schedule via `CombatModMagnitude` flag. `apply_combat_mod_substitution` detects `CombatModMagnitude` + `Boost (12)` flags and replaces `*_ones` → `*_boosts_{schedule}` with scale 1.0. Schedule determined from original scale: 0.05→20 (Range/Def/Res/ToHit), 0.0833→33 (Dmg/Acc/Rech/End/Heal/Mez/Speed), 0.10→40 (Interrupt), 0.15→60 (KB). Crafted IO scales (larger, vary by level) matched to closest `boosts_XX[49]` value. Procs excluded (no `Boost` flag). Set IOs mostly use `*_boosts_XX` directly.
+- IO boosters (+1 to +5): multiply base enhancement value by `(1 + boost_level * 0.05)`. A +5 boost = ×1.25 (e.g. 42.4% → 53.0%). NOT a table index offset — the boosts tables extend to 105 entries but those higher indices are NOT used for boosters.
 - Powerset `icon` field in DB often points to `*_set.png` files that don't exist in our image assets. Always use first power's icon via SQL subquery instead of `COALESCE(p.icon, ...)`.
 - `HeroBuildFile.inherent_powers` uses `#[serde(default)]` for backward compatibility with save files that predate inherent slotting.
 - `SlottedBoost`/`SavedBoost` have `boostLevel` (0-5 IO booster level) and `setGroupName` (Archetype, Very_Rare, etc.) — both use `#[serde(default)]` on the Rust side for backward compat.
 - Archetype enhancements are always attuned (forced in `BoostSetBrowser`/`EnhancementPicker`). Very Rare (purple) sets are always attuned. Set enhancement levels are clamped to `[min_level, max_level]`.
-- IO boosters (+1 to +5): on any non-attuned IO enhancement (plain or set), effective level = `level + boost_level` (capped at 50) in `compute_enhancement_strengths`.
+- IO boosters (+1 to +5): on any non-attuned IO enhancement (plain or set), the boost applies a `(1 + boost_level * 0.05)` multiplier to the base enhancement strength. Attuned enhancements reset boost_level to 0.
 
 ### Code Intelligence
 

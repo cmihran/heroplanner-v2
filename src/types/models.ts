@@ -115,6 +115,7 @@ export interface BoostSetDetail {
   name: string;
   display_name: string;
   group_name: string;
+  rarity: string | null;
   min_level: number;
   max_level: number;
   bonuses: BoostSetBonus[];

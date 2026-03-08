@@ -69,8 +69,8 @@ export const api = {
   calculatePowerEffects: (archetypeId: number, powerFullName: string, level: number, enhancements: SlottedEnhancement[] = []): Promise<PowerEffectsResult> =>
     isTauri ? trackedInvoke('calculate_power_effects', { archetypeId, powerFullName, level, enhancements }) : Promise.resolve({ effects: [], enhancedRecharge: null, enhancedEndurance: null }),
 
-  getEnhancementValues: (archetypeId: number, boostKey: string, level: number, isAttuned: boolean) =>
-    isTauri ? trackedInvoke<EnhancementStrength[]>('get_enhancement_values', { archetypeId, boostKey, level, isAttuned }) : Promise.resolve([]),
+  getEnhancementValues: (archetypeId: number, boostKey: string, level: number, isAttuned: boolean, boostLevel: number = 0) =>
+    isTauri ? trackedInvoke<EnhancementStrength[]>('get_enhancement_values', { archetypeId, boostKey, level, isAttuned, boostLevel }) : Promise.resolve([]),
 
   setZoom: (factor: number) =>
     isTauri ? trackedInvoke<void>('set_zoom', { factor }) : Promise.resolve(),

@@ -24,9 +24,9 @@ export function HeroInfo() {
       />
       {/* Panel content with beveled edges */}
       <div className="p-3 space-y-3 border-b border-coh-secondary/40 shadow-[inset_0_0.0625rem_0_rgba(53,123,215,0.1),inset_0_-0.0625rem_0_rgba(0,0,0,0.3)]">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap gap-3">
           {/* Archetype selector */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-[8rem]">
             <label className="text-[0.6875rem] font-medium text-coh-gradient4/80 mb-1 block uppercase tracking-wider">
               Archetype
             </label>
@@ -61,7 +61,7 @@ export function HeroInfo() {
           </div>
 
           {/* Hero name */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-[8rem]">
             <label className="text-[0.6875rem] font-medium text-coh-gradient4/80 mb-1 block uppercase tracking-wider">
               Hero Name
             </label>
@@ -74,7 +74,7 @@ export function HeroInfo() {
           </div>
 
           {/* Origin selector */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-[8rem]">
             <label className="text-[0.6875rem] font-medium text-coh-gradient4/80 mb-1 block uppercase tracking-wider">
               Origin
             </label>

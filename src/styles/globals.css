@@ -128,6 +128,19 @@ input[type="radio"] {
   animation: attuned-pulse 2.5s ease-in-out infinite;
 }
 
+@keyframes purple-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0.375rem rgba(168, 85, 247, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0.625rem rgba(168, 85, 247, 0.7);
+  }
+}
+
+.purple-glow {
+  animation: purple-pulse 2.5s ease-in-out infinite;
+}
+
 .header-gradient {
   background: radial-gradient(circle, rgba(53, 136, 224, 1) 0%, rgba(0, 0, 0, 1) 100%);
 }

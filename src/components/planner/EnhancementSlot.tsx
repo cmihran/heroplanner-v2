@@ -51,11 +51,17 @@ export function EnhancementSlot({ powerFullName, slotIndex, boost, isEmpty, onAl
     </span>
   ) : null;
 
+  const rarity = boost?.setGroupName;
+  const isPurpleTier = rarity === 'Very Rare' || rarity === 'PvP' || rarity?.startsWith('Superior');
+  const glowClass = isPurpleTier
+    ? 'ring-2 ring-purple-400 shadow-[0_0_0.5rem_rgba(168,85,247,0.4)] purple-glow'
+    : boost?.isAttuned
+      ? 'ring-2 ring-amber-400 shadow-[0_0_0.5rem_rgba(245,158,11,0.4)] attuned-glow'
+      : '';
+
   const slotButton = boost?.icon ? (
     <button
-      className={`relative w-[2.5rem] h-[2.5rem] flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80 rounded-full ${
-        boost.isAttuned ? 'ring-2 ring-amber-400 shadow-[0_0_0.5rem_rgba(245,158,11,0.4)] attuned-glow' : ''
-      }`}
+      className={`relative w-[2.5rem] h-[2.5rem] flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80 rounded-full ${glowClass}`}
     >
       <img src={imageUrl(boost.icon)} alt={boost.computedName ?? ''} className="w-[2.5rem] h-[2.5rem]" />
       {levelBadge}

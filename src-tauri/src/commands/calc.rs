@@ -42,9 +42,10 @@ fn compute_enhancement_strengths(
         let enh_level = if enh.is_attuned {
             char_level
         } else {
-            let base = enh.level.unwrap_or(50) + enh.boost_level;
-            base.min(53).saturating_sub(1).max(0) as usize
+            enh.level.unwrap_or(50).saturating_sub(1).max(0) as usize
         };
+        // IO boosters: +5% per boost level (multiplicative on base value)
+        let boost_mult = 1.0 + (enh.boost_level as f64 * 0.05);
 
         // Get enhancement effect templates (attribs, table, scale)
         let effect_data = get_enhancement_effect_data(db, &enh.boost_key);
@@ -65,7 +66,7 @@ fn compute_enhancement_strengths(
                 })
                 .unwrap_or(0.0);
 
-            let strength = table_value * scale;
+            let strength = table_value * scale * boost_mult;
             for attrib in &attribs {
                 *raw_strengths.entry(attrib.clone()).or_default() += strength;
             }
@@ -180,17 +181,54 @@ fn get_enhancement_effect_data(
 /// schedule table so that table_value * scale gives the correct level-scaled
 /// enhancement strength. The Boost flag distinguishes regular enhancement effects
 /// from procs which also have CombatModMagnitude but should keep their flat values.
+///
+/// Different enhancement types use different schedules:
+///   Schedule 20 (boosts_20): Range, Defense, Resistance, ToHit
+///   Schedule 33 (boosts_33): Damage, Accuracy, Recharge, EndRed, Heal, Mez, Speed
+///   Schedule 40 (boosts_40): Interrupt
+///   Schedule 60 (boosts_60): Knockback
 fn apply_combat_mod_substitution(table_name: &str, scale: f64, raw_json: &str) -> (String, f64) {
     let has_combat_mod = raw_json.contains("CombatModMagnitude");
     let has_boost = raw_json.contains("Boost (12)");
     let table_lower = table_name.to_lowercase();
     if has_combat_mod && has_boost && table_lower.ends_with("_ones") {
-        // Replace flat table with IO schedule table (33% schedule for standard IOs)
         let prefix = &table_lower[..table_lower.len() - 5]; // strip "_ones"
-        (format!("{}_boosts_33", prefix), 1.0)
+        let schedule = schedule_from_scale(scale);
+        (format!("{}_boosts_{}", prefix, schedule), 1.0)
     } else {
         (table_name.to_string(), scale)
     }
+}
+
+/// Determine the IO schedule from the template scale.
+/// Generic IO scales: 0.05→20, 0.0833→33, 0.10→40, 0.15→60.
+/// Crafted/other scales: closest boosts_XX[49] value.
+fn schedule_from_scale(scale: f64) -> u32 {
+    if scale < 0.067 {
+        return 20;
+    }
+    if scale < 0.092 {
+        return 33;
+    }
+    if scale < 0.125 {
+        return 40;
+    }
+    if scale < 0.20 {
+        return 60;
+    }
+    const SCHEDULES: [(u32, f64); 4] = [
+        (20, 0.2545),
+        (33, 0.4238),
+        (40, 0.5091),
+        (60, 0.7636),
+    ];
+    SCHEDULES
+        .iter()
+        .min_by(|a, b| {
+            (scale - a.1).abs().partial_cmp(&(scale - b.1).abs()).unwrap()
+        })
+        .map(|s| s.0)
+        .unwrap_or(33)
 }
 
 #[tauri::command]
@@ -849,6 +887,7 @@ pub fn calculate_total_stats(
 
 /// Get the enhancement strength values for a single enhancement at a given level.
 /// Returns per-attrib strength (before ED, raw percentage).
+/// boost_level: IO booster level (0-5), adds +5% per level multiplicatively.
 #[tauri::command]
 pub fn get_enhancement_values(
     state: State<DbState>,
@@ -856,11 +895,13 @@ pub fn get_enhancement_values(
     boost_key: &str,
     level: usize,
     is_attuned: bool,
+    boost_level: usize,
 ) -> Result<Vec<EnhancementStrength>, String> {
     let db = state.0.lock().map_err(|e| e.to_string())?;
 
     let _ = is_attuned; // attuned uses same level for display purposes
     let enh_level = level;
+    let boost_mult = 1.0 + (boost_level as f64 * 0.05);
 
     let effect_data = get_enhancement_effect_data(&db, boost_key);
     let mut results = Vec::new();
@@ -880,7 +921,7 @@ pub fn get_enhancement_values(
             })
             .unwrap_or(0.0);
 
-        let strength = table_value * scale;
+        let strength = table_value * scale * boost_mult;
 
         for attrib in &attribs {
             let display = format_attrib(attrib);

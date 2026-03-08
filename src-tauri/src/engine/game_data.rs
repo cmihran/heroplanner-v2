@@ -217,16 +217,59 @@ fn load_archetype_stats(
 }
 
 /// CombatModMagnitude substitution: replaces flat `*_ones` tables with IO schedule tables.
+/// Different enhancement types use different schedules:
+///   Schedule 20 (boosts_20): Range, Defense, Resistance, ToHit
+///   Schedule 33 (boosts_33): Damage, Accuracy, Recharge, EndRed, Heal, Mez, Speed
+///   Schedule 40 (boosts_40): Interrupt
+///   Schedule 60 (boosts_60): Knockback
+/// Generic IO scales map directly: 0.05→20, 0.0833→33, 0.10→40, 0.15→60.
+/// Other scales (crafted IOs) are matched to the closest schedule table value at level 50.
 fn apply_combat_mod_substitution(table_name: &str, scale: f64, raw_json: &str) -> (String, f64) {
     let has_combat_mod = raw_json.contains("CombatModMagnitude");
     let has_boost = raw_json.contains("Boost (12)");
     let table_lower = table_name.to_lowercase();
     if has_combat_mod && has_boost && table_lower.ends_with("_ones") {
         let prefix = &table_lower[..table_lower.len() - 5];
-        (format!("{}_boosts_33", prefix), 1.0)
+        let schedule = schedule_from_scale(scale);
+        (format!("{}_boosts_{}", prefix, schedule), 1.0)
     } else {
         (table_name.to_string(), scale)
     }
+}
+
+/// Determine the IO schedule from the template scale.
+/// Generic IO scales: 0.05→20, 0.0833→33, 0.10→40, 0.15→60.
+/// Crafted/other scales: closest boosts_XX[49] value.
+fn schedule_from_scale(scale: f64) -> u32 {
+    // Generic IO scale thresholds (midpoints between known scales)
+    // 0.05, 0.0833, 0.10, 0.15
+    if scale < 0.067 {
+        return 20; // ≤ midpoint(0.05, 0.0833)
+    }
+    if scale < 0.092 {
+        return 33; // ≤ midpoint(0.0833, 0.10)
+    }
+    if scale < 0.125 {
+        return 40; // ≤ midpoint(0.10, 0.15)
+    }
+    if scale < 0.20 {
+        return 60; // generic knockback scale 0.15
+    }
+    // Crafted/other IOs: match against boosts_XX values at level 50 (index 49).
+    // These are constant across all archetypes.
+    const SCHEDULES: [(u32, f64); 4] = [
+        (20, 0.2545),
+        (33, 0.4238),
+        (40, 0.5091),
+        (60, 0.7636),
+    ];
+    SCHEDULES
+        .iter()
+        .min_by(|a, b| {
+            (scale - a.1).abs().partial_cmp(&(scale - b.1).abs()).unwrap()
+        })
+        .map(|s| s.0)
+        .unwrap_or(33)
 }
 
 fn load_enhancement_effects(conn: &Connection) -> HashMap<String, Vec<EnhEffect>> {
@@ -830,19 +873,44 @@ mod tests {
     }
 
     #[test]
+    fn schedule_from_scale_generic_ios() {
+        assert_eq!(schedule_from_scale(0.05), 20);
+        assert_eq!(schedule_from_scale(0.0833), 33);
+        assert_eq!(schedule_from_scale(0.10), 40);
+        assert_eq!(schedule_from_scale(0.15), 60);
+    }
+
+    #[test]
+    fn schedule_from_scale_crafted_ios() {
+        // Crafted level 50 scales should match correct schedules
+        assert_eq!(schedule_from_scale(0.4), 33); // Crafted_Accuracy_50
+        assert_eq!(schedule_from_scale(0.25), 20); // Crafted_Range_50 / Crafted_Res_Damage_50
+        assert_eq!(schedule_from_scale(0.75), 60); // Crafted_Knockback_50
+    }
+
+    #[test]
     #[ignore]
     fn combat_mod_substitution_applied() {
         let conn = test_db_conn().expect("heroplanner.db not found");
         let gd = load_game_data(&conn);
+        // Schedule 33: Accuracy
         let effects = gd
             .enhancement_effects
             .get("Generic_Accuracy")
             .expect("Generic_Accuracy not found");
-        // CombatMod substitution should have replaced *_ones -> *_boosts_33 with scale 1.0
         let has_boosts_33 = effects
             .iter()
             .any(|e| e.table_name.contains("boosts_33") && (e.scale - 1.0).abs() < 0.01);
-        assert!(has_boosts_33, "CombatMod substitution not applied");
+        assert!(has_boosts_33, "Accuracy should use boosts_33");
+        // Schedule 20: Range
+        let effects = gd
+            .enhancement_effects
+            .get("Generic_Range")
+            .expect("Generic_Range not found");
+        let has_boosts_20 = effects
+            .iter()
+            .any(|e| e.table_name.contains("boosts_20") && (e.scale - 1.0).abs() < 0.01);
+        assert!(has_boosts_20, "Range should use boosts_20");
     }
 
     #[test]

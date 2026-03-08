@@ -29,22 +29,22 @@ export function LeftPanel() {
       <Tabs defaultValue="powersets" className="flex-1 flex flex-col min-h-0">
         {/* Tab bar with bottom border and active tab break-through effect */}
         <div className="relative mx-3 mt-2">
-          <TabsList className="relative z-10 bg-coh-dark/60 border border-coh-secondary/30 shadow-[0_0.0625rem_0.25rem_rgba(0,0,0,0.2)]">
+          <TabsList className="relative z-10 w-full !flex flex-wrap !h-auto bg-coh-dark/60 border border-coh-secondary/30 shadow-[0_0.0625rem_0.25rem_rgba(0,0,0,0.2)]">
             <TabsTrigger
               value="powersets"
-              className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
+              className="flex-1 data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
             >
               Power Sets
             </TabsTrigger>
             <TabsTrigger
               value="totalstats"
-              className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
+              className="flex-1 data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
             >
               Total Stats
             </TabsTrigger>
             <TabsTrigger
               value="setbonuses"
-              className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
+              className="flex-1 data-[state=active]:bg-gradient-to-b data-[state=active]:from-coh-gradient1/20 data-[state=active]:to-transparent data-[state=active]:text-coh-gradient4 data-[state=active]:shadow-[inset_0_0.125rem_0_#ffc442,0_0_0.375rem_rgba(53,123,215,0.15)] transition-all duration-200"
             >
               Set Bonuses
             </TabsTrigger>

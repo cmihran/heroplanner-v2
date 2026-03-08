@@ -126,6 +126,7 @@ pub struct BoostSetDetail {
     pub name: String,
     pub display_name: String,
     pub group_name: String,
+    pub rarity: Option<String>,
     pub min_level: i32,
     pub max_level: i32,
     pub bonuses: Vec<BoostSetBonus>,

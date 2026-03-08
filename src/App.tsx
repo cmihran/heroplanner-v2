@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Toaster } from 'sonner';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import type { PanelImperativeHandle } from 'react-resizable-panels';
 import { Header } from '@/components/planner/Header';
 import { LeftPanel } from '@/components/planner/LeftPanel';
 import { RightPanel } from '@/components/planner/RightPanel';
@@ -37,6 +38,42 @@ function App() {
       readySent.current = true;
       invoke('log_frontend_ready');
     }
+  }, []);
+
+  // Sync all glow animations to the same phase regardless of mount time
+  useEffect(() => {
+    const DURATION = 2500;
+    const GLOW_CLASSES = ['attuned-glow', 'purple-glow'];
+    const sync = (el: Element) => {
+      (el as HTMLElement).style.animationDelay = `${-(performance.now() % DURATION)}ms`;
+    };
+    const syncAll = (root: ParentNode) => {
+      root.querySelectorAll(GLOW_CLASSES.map(c => `.${c}`).join(',')).forEach(sync);
+    };
+    syncAll(document);
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node instanceof HTMLElement) {
+            for (const cls of GLOW_CLASSES) {
+              if (node.classList.contains(cls)) { sync(node); break; }
+            }
+            syncAll(node);
+          }
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  const leftPanelRef = useRef<PanelImperativeHandle>(null);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const toggleLeftPanel = useCallback(() => {
+    const panel = leftPanelRef.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) panel.expand();
+    else panel.collapse();
   }, []);
 
   // Intercept OS-level window close (Alt+F4, taskbar close) to warn about unsaved changes
@@ -76,10 +113,18 @@ function App() {
       <Header />
       <div className="h-[2px] flex-shrink-0 header-divider" />
       <ResizablePanelGroup className="flex-1">
-        <ResizablePanel defaultSize={30} minSize={20} className="overflow-hidden">
+        <ResizablePanel
+          panelRef={leftPanelRef}
+          collapsible
+          collapsedSize={0}
+          defaultSize={30}
+          minSize={20}
+          className="overflow-hidden"
+          onResize={(size) => setLeftCollapsed(size.asPercentage === 0)}
+        >
           <LeftPanel />
         </ResizablePanel>
-        <ResizableHandle withHandle />
+        <ResizableHandle withHandle collapsed={leftCollapsed} onHandleClick={toggleLeftPanel} />
         <ResizablePanel defaultSize={70} minSize={30}>
           <RightPanel />
         </ResizablePanel>

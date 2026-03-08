@@ -38,7 +38,9 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     fetchPowerDetail(powerFullName).then(setDetail);
   }, [powerFullName, fetchPowerDetail]);
 
-  // Fetch enhancement % for IO enhancements when detail loads
+  // Fetch enhancement % for IO enhancements — reflects current boost's level/boostLevel
+  const ioLevel = currentBoost ? (currentBoost.isAttuned ? 49 : (currentBoost.level ?? 50) - 1) : 49;
+  const ioBoostLevel = currentBoost?.boostLevel ?? 0;
   useEffect(() => {
     if (!detail || !archetype) return;
     let cancelled = false;
@@ -46,7 +48,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
       const results: Record<string, EnhancementStrength[]> = {};
       for (const boostName of detail.boosts_allowed) {
         try {
-          const strengths = await api.getEnhancementValues(archetype.id, boostName, 49, false);
+          const strengths = await api.getEnhancementValues(archetype.id, boostName, ioLevel, false, ioBoostLevel);
           if (!cancelled) results[boostName] = strengths;
         } catch { /* skip */ }
       }
@@ -54,14 +56,14 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     };
     fetchStrengths();
     return () => { cancelled = true; };
-  }, [detail, archetype]);
+  }, [detail, archetype, ioLevel, ioBoostLevel]);
 
   // Fetch enhancement strengths for the currently slotted boost (reacts to level/boostLevel/attuned changes)
   useEffect(() => {
     if (!currentBoost || !archetype) { setCurrentStrengths(null); return; }
     let cancelled = false;
-    const effectiveLevel = currentBoost.isAttuned ? 49 : Math.min(53, (currentBoost.level ?? 50) + (currentBoost.boostLevel ?? 0)) - 1;
-    api.getEnhancementValues(archetype.id, currentBoost.boostKey, effectiveLevel, currentBoost.isAttuned)
+    const baseLevel = currentBoost.isAttuned ? 49 : (currentBoost.level ?? 50) - 1;
+    api.getEnhancementValues(archetype.id, currentBoost.boostKey, baseLevel, currentBoost.isAttuned, currentBoost.boostLevel ?? 0)
       .then((s) => { if (!cancelled) setCurrentStrengths(s); })
       .catch(() => { if (!cancelled) setCurrentStrengths(null); });
     return () => { cancelled = true; };
@@ -98,7 +100,7 @@ export function EnhancementPicker({ powerFullName, slotIndex, onSelect, isInhere
     }
   }, [currentBoost?.setName, fetchBoostSetDetail]);
 
-  const isArchetypeSet = currentBoost?.setGroupName?.includes('Archetype') ?? false;
+  const isArchetypeSet = currentBoost?.setGroupName === 'Archetype';
 
   const handleLevelChange = (newLevel: number) => {
     if (!currentBoost) return;
